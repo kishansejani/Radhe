@@ -3,12 +3,120 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Phone, Mail, MapPin, Music, Zap, Flame, Star, Sparkles, Wind,
   PartyPopper, CheckCircle2, Users, HelpCircle, ArrowRight,
-  Image as ImageIcon, Send, Menu, X, Camera, Play
+  Image as ImageIcon, Send, Menu, X, Camera, Play, ChevronDown, ArrowUp
 } from 'lucide-react';
+
+const BubbleBackground = () => {
+  const bubbles = React.useMemo(() => [...Array(40)].map((_, i) => ({
+    id: i,
+    size: Math.random() * 50 + 15,
+    left: `${Math.random() * 100}%`,
+    duration: Math.random() * 12 + 8,
+    delay: Math.random() * 10,
+    opacity: Math.random() * 0.4 + 0.1,
+    color: i % 3 === 0 ? 'var(--royal-purple)' : i % 3 === 1 ? 'var(--primary-gold)' : 'var(--vibrant-pink)',
+    wobble: Math.random() * 100 - 50,
+  })), []);
+
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none z-10">
+      {bubbles.map((b) => (
+        <motion.div
+          key={b.id}
+          className="absolute"
+          style={{
+            width: b.size,
+            height: b.size,
+            left: b.left,
+            bottom: '-10%',
+            borderRadius: '50%',
+            background: `radial-gradient(circle at 30% 30%, rgba(255,255,255,0.6), ${b.color})`,
+            boxShadow: `0 0 20px ${b.color}66`,
+            border: '1px solid rgba(255,255,255,0.3)',
+            backdropFilter: 'blur(2px)',
+          }}
+          animate={{
+            y: [0, -1100], 
+            x: [0, b.wobble, 0],
+            opacity: [0, b.opacity, 0],
+            scale: [0.7, 1.1, 0.7],
+          }}
+          transition={{
+            duration: b.duration,
+            repeat: Infinity,
+            delay: b.delay,
+            ease: "linear"
+          }}
+        />
+      ))}
+      
+      {/* Central Pulsing Glow to maintain depth */}
+      <motion.div 
+        className="absolute inset-0 z-0"
+        animate={{ 
+          background: [
+            'radial-gradient(circle at 50% 50%, rgba(139,92,246,0.1) 0%, transparent 70%)',
+            'radial-gradient(circle at 50% 50%, rgba(139,92,246,0.18) 0%, transparent 70%)',
+            'radial-gradient(circle at 50% 50%, rgba(139,92,246,0.1) 0%, transparent 70%)'
+          ]
+        }}
+        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+      />
+    </div>
+  );
+};
+
+const CustomCursor = () => {
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isPointer, setIsPointer] = useState(false);
+
+  React.useEffect(() => {
+    const handleMove = (e) => setPosition({ x: e.clientX, y: e.clientY });
+    const handlePointer = () => setIsPointer(true);
+    const handleNormal = () => setIsPointer(false);
+
+    window.addEventListener('mousemove', handleMove);
+    document.querySelectorAll('a, button, .faq-item').forEach(el => {
+      el.addEventListener('mouseenter', handlePointer);
+      el.addEventListener('mouseleave', handleNormal);
+    });
+
+    return () => {
+      window.removeEventListener('mousemove', handleMove);
+    };
+  }, []);
+
+  return (
+    <motion.div
+      className="custom-cursor"
+      animate={{
+        x: position.x - 10,
+        y: position.y - 10,
+        scale: isPointer ? 2.5 : 1,
+        backgroundColor: isPointer ? 'rgba(251,191,36,0.3)' : 'rgba(139,92,246,0.5)',
+      }}
+      transition={{ type: 'spring', damping: 25, stiffness: 250, mass: 0.5 }}
+    />
+  );
+};
 
 const App = () => {
   const [formData, setFormData] = useState({ name: '', phone: '', event: '', message: '' });
   const [menuOpen, setMenuOpen] = useState(false);
+  const [openFaqIndex, setOpenFaqIndex] = useState(0);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
+  React.useEffect(() => {
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 400);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -138,6 +246,8 @@ const App = () => {
             style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.28 }}
           />
           <div className="absolute inset-0 hero-overlay" />
+          
+          <BubbleBackground />
         </div>
 
         <div className="hero-content">
@@ -226,6 +336,31 @@ const App = () => {
         </div>
       </section>
 
+      {/* ─────────────── STATS ─────────────── */}
+      <section className="section-padding" style={{ background: 'var(--alt-bg)', paddingTop: 0 }}>
+        <div className="stats-grid">
+          {[
+            { label: 'Successful Events', value: '500+', icon: <PartyPopper size={32} /> },
+            { label: 'Years Experience', value: '10+', icon: <Users size={32} /> },
+            { label: 'Happy Clients', value: '100%', icon: <Star size={32} /> },
+            { label: 'Expert Staff', value: '10+', icon: <CheckCircle2 size={32} /> },
+          ].map((stat, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: i * 0.15 }}
+              className="glass-card stat-card"
+            >
+              <div className="stat-icon">{stat.icon}</div>
+              <h3 className="royal-gradient" style={{ fontSize: '2.5rem', fontWeight: 900, marginBottom: '0.5rem' }}>{stat.value}</h3>
+              <p style={{ color: '#94a3b8', fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '2px' }}>{stat.label}</p>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
       {/* ─────────────── SERVICES ─────────────── */}
       <section id="services" className="section-padding" style={{ background: '#070b1d' }}>
         <div className="text-center" style={{ marginBottom: '4rem' }}>
@@ -246,6 +381,7 @@ const App = () => {
           ))}
         </div>
       </section>
+
 
       {/* ─────────────── GALLERY ─────────────── */}
       <section id="gallery" className="section-padding">
@@ -321,26 +457,90 @@ const App = () => {
         </div>
       </section>
 
+      {/* ─────────────── TESTIMONIALS ─────────────── */}
+      <section className="section-padding">
+        <div className="text-center" style={{ marginBottom: '4rem' }}>
+          <div className="badge">Testimonials</div>
+          <h2 style={{ fontSize: 'clamp(1.8rem, 4vw, 3.2rem)' }}>
+            What Our <span className="royal-gradient">Clients Say</span>
+          </h2>
+        </div>
+        
+        <div className="testimonials-grid">
+          {[
+            { name: 'Ramesh Patel', role: 'Wedding Client', text: 'Radhe DJ made our wedding magical! The sound quality was top-notch and the pyro effects were breathtaking.' },
+            { name: 'Raj Bhalodiya', role: 'Birthday Party', text: 'Unbelievable energy! They kept the crowd dancing for 6 hours straight. Highly recommended for any event.' },
+            { name: 'Harsh Ramani', role: 'Corporate Event', text: 'Professional crew and amazing lighting. They handled everything perfectly from start to finish.' },
+          ].map((t, i) => (
+            <motion.div 
+              key={i} 
+              whileHover={{ y: -10 }}
+              className="glass-card testimonial-card"
+            >
+              <div style={{ display: 'flex', gap: '4px', marginBottom: '1.2rem' }}>
+                {[...Array(5)].map((_, i) => <Star key={i} size={16} fill="#fbbf24" color="#fbbf24" />)}
+              </div>
+              <p style={{ fontStyle: 'italic', color: '#cbd5e1', marginBottom: '2rem', lineHeight: 1.8 }}>"{t.text}"</p>
+              <div>
+                <h4 style={{ fontWeight: 800, color: '#fff' }}>{t.name}</h4>
+                <p style={{ color: '#8b5cf6', fontSize: '0.8rem', fontWeight: 700 }}>{t.role}</p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
       {/* ─────────────── FAQ ─────────────── */}
       <section className="section-padding">
         <div className="max-w-4xl mx-auto">
           <div className="text-center" style={{ marginBottom: '3.5rem' }}>
+            <div className="badge">FAQ</div>
             <h2 style={{ fontSize: 'clamp(1.8rem, 4vw, 2.8rem)', marginBottom: '1rem' }}>
               Common <span className="royal-gradient">Inquiries</span>
             </h2>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
-            {faqs.map((faq, i) => (
-              <div key={i} className="glass-card" style={{ padding: '28px 32px' }}>
-                <div style={{ display: 'flex', gap: '18px', alignItems: 'flex-start' }}>
-                  <HelpCircle style={{ color: '#fbbf24', flexShrink: 0, marginTop: '2px' }} size={24} />
-                  <div>
-                    <h4 style={{ fontSize: '1.1rem', marginBottom: '0.6rem', fontWeight: 700 }}>{faq.q}</h4>
-                    <p style={{ color: '#94a3b8', lineHeight: 1.8, fontSize: '0.95rem' }}>{faq.a}</p>
+            {faqs.map((faq, i) => {
+              const isOpen = openFaqIndex === i;
+              return (
+                <div 
+                  key={i} 
+                  className={`glass-card faq-item ${isOpen ? 'active' : ''}`} 
+                  style={{ padding: '0', cursor: 'pointer' }}
+                  onClick={() => setOpenFaqIndex(isOpen ? -1 : i)}
+                >
+                  <div style={{ padding: '24px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', gap: '18px', alignItems: 'center' }}>
+                      <HelpCircle style={{ color: isOpen ? '#fbbf24' : '#64748b', transition: 'color 0.3s' }} size={24} />
+                      <h4 style={{ fontSize: '1.1rem', fontWeight: 700, color: isOpen ? '#fff' : '#cbd5e1' }}>{faq.q}</h4>
+                    </div>
+                    <motion.div
+                      animate={{ rotate: isOpen ? 180 : 0 }}
+                      transition={{ duration: 0.3 }}
+                      style={{ color: isOpen ? '#fbbf24' : '#64748b' }}
+                    >
+                      <ChevronDown size={22} />
+                    </motion.div>
                   </div>
+                  
+                  <AnimatePresence>
+                    {isOpen && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.3, ease: 'easeInOut' }}
+                        style={{ overflow: 'hidden' }}
+                      >
+                        <div style={{ padding: '0 32px 32px 74px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                          <p style={{ color: '#94a3b8', lineHeight: 1.8, fontSize: '0.95rem' }}>{faq.a}</p>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>
@@ -447,9 +647,15 @@ const App = () => {
             </p>
             {/* Social icons */}
             <div style={{ display: 'flex', gap: '14px', marginTop: '1.5rem' }}>
-              <a href="#" aria-label="Instagram" className="social-icon"><Camera size={18} /></a>
-              <a href="#" aria-label="YouTube" className="social-icon"><Play size={18} /></a>
-              <a href="tel:9624047940" aria-label="Phone" className="social-icon"><Phone size={18} /></a>
+              <a href="https://www.instagram.com/radhe_dj_official?igsh=MXhndmw4MjAxcG9iNA==" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="social-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
+              </a>
+              <a href="https://youtu.be/8VJOp63Ac6o?si=vFoGOL-w6rRi65iH" target="_blank" rel="noopener noreferrer" aria-label="YouTube" className="social-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.42a2.78 2.78 0 0 0-1.94 2C1 8.11 1 12 1 12s0 3.89.46 5.58a2.78 2.78 0 0 0 1.94 2c1.72.42 8.6.42 8.6.42s6.88 0 8.6-.42a2.78 2.78 0 0 0 1.94-2C23 15.89 23 12 23 12s0-3.89-.46-5.58z"></path><polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02"></polygon></svg>
+              </a>
+              <a href="https://wa.me/919624047940" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp" className="social-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+              </a>
             </div>
           </div>
 
@@ -506,6 +712,33 @@ const App = () => {
         </div>
       </footer>
 
+      {/* ─────────────── FLOATING ACTIONS ─────────────── */}
+      <div className="floating-actions">
+        <AnimatePresence>
+          {showScrollTop && (
+            <motion.button
+              initial={{ opacity: 0, scale: 0.5, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.5, y: 20 }}
+              onClick={scrollToTop}
+              className="float-btn float-top"
+              aria-label="Back to top"
+            >
+              <ArrowUp size={24} />
+            </motion.button>
+          )}
+        </AnimatePresence>
+        
+        <a 
+          href="https://wa.me/919624047940" 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          className="float-btn float-whatsapp"
+          aria-label="WhatsApp"
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        </a>
+      </div>
     </div>
   );
 };
