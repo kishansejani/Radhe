@@ -36,7 +36,7 @@ const BubbleBackground = () => {
             backdropFilter: 'blur(2px)',
           }}
           animate={{
-            y: [0, -1100], 
+            y: [0, -1100],
             x: [0, b.wobble, 0],
             opacity: [0, b.opacity, 0],
             scale: [0.7, 1.1, 0.7],
@@ -49,11 +49,11 @@ const BubbleBackground = () => {
           }}
         />
       ))}
-      
+
       {/* Central Pulsing Glow to maintain depth */}
-      <motion.div 
+      <motion.div
         className="absolute inset-0 z-0"
-        animate={{ 
+        animate={{
           background: [
             'radial-gradient(circle at 50% 50%, rgba(139,92,246,0.1) 0%, transparent 70%)',
             'radial-gradient(circle at 50% 50%, rgba(139,92,246,0.18) 0%, transparent 70%)',
@@ -94,10 +94,100 @@ const CustomCursor = () => {
         y: position.y - 10,
         scale: isPointer ? 2.5 : 1,
         backgroundColor: isPointer ? 'rgba(251,191,36,0.3)' : 'rgba(139,92,246,0.5)',
+        border: isPointer ? '1px solid rgba(251,191,36,0.6)' : '1px solid rgba(139,92,246,0.2)',
       }}
       transition={{ type: 'spring', damping: 25, stiffness: 250, mass: 0.5 }}
     />
   );
+};
+
+const ScrollProgressBar = () => {
+  const [scrollProgress, setScrollProgress] = useState(0);
+
+  React.useEffect(() => {
+    const handleScroll = () => {
+      const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const progress = (window.scrollY / totalHeight) * 100;
+      setScrollProgress(progress);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  return (
+    <div 
+      className="scroll-progress-bar" 
+      style={{ 
+        width: `${scrollProgress}%`,
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        height: '4px',
+        background: 'linear-gradient(90deg, #fbbf24, #ec4899, #8b5cf6)',
+        zIndex: 9999,
+        boxShadow: '0 0 15px rgba(251, 191, 36, 0.4)'
+      }} 
+    />
+  );
+};
+
+const AudioExperience = () => {
+  const initialized = React.useRef(false);
+  
+  const tracks = [
+    'https://cdn.pixabay.com/audio/2022/10/18/audio_31c29096a0.mp3',
+    'https://cdn.pixabay.com/audio/2022/01/18/audio_d0c6ff1725.mp3',
+    'https://cdn.pixabay.com/audio/2021/11/23/audio_0ed24b8900.mp3',
+    'https://cdn.pixabay.com/audio/2022/03/10/audio_c8c8a73a56.mp3'
+  ];
+
+  const playExperience = React.useCallback(() => {
+    if (initialized.current) return;
+    
+    // 1. Voice Greeting
+    const speech = new SpeechSynthesisUtterance();
+    speech.text = "Radhe DJ and Event aapka swagat krte hai";
+    speech.lang = 'hi-IN';
+    speech.rate = 0.85;
+
+    // 2. Music
+    const randomTrack = tracks[Math.floor(Math.random() * tracks.length)];
+    const audio = new Audio(randomTrack);
+    audio.loop = true;
+    audio.volume = 0.35;
+
+    // Trigger Speech
+    window.speechSynthesis.speak(speech);
+    
+    speech.onstart = () => {
+      initialized.current = true; // Mark as started once speech begins
+      setTimeout(() => {
+        audio.play().catch(() => {
+          initialized.current = false; // Allow retry if blocked
+        });
+      }, 800);
+    };
+  }, []);
+
+  React.useEffect(() => {
+    // Attempt auto-play on load
+    playExperience();
+
+    // Interaction fallback
+    const triggerEvents = ['mousedown', 'keydown', 'touchstart', 'scroll'];
+    const handleTrigger = () => {
+      playExperience();
+      if (initialized.current) {
+        triggerEvents.forEach(e => window.removeEventListener(e, handleTrigger));
+      }
+    };
+
+    triggerEvents.forEach(e => window.addEventListener(e, handleTrigger));
+    return () => triggerEvents.forEach(e => window.removeEventListener(e, handleTrigger));
+  }, [playExperience]);
+
+  return null;
 };
 
 const App = () => {
@@ -177,6 +267,9 @@ const App = () => {
 
   return (
     <div className="min-h-screen">
+      <AudioExperience />
+      <CustomCursor />
+      <ScrollProgressBar />
 
       {/* ─────────────── NAVIGATION ─────────────── */}
       <nav>
@@ -246,7 +339,7 @@ const App = () => {
             style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.28 }}
           />
           <div className="absolute inset-0 hero-overlay" />
-          
+
           <BubbleBackground />
         </div>
 
@@ -465,15 +558,15 @@ const App = () => {
             What Our <span className="royal-gradient">Clients Say</span>
           </h2>
         </div>
-        
+
         <div className="testimonials-grid">
           {[
             { name: 'Ramesh Patel', role: 'Wedding Client', text: 'Radhe DJ made our wedding magical! The sound quality was top-notch and the pyro effects were breathtaking.' },
             { name: 'Raj Bhalodiya', role: 'Birthday Party', text: 'Unbelievable energy! They kept the crowd dancing for 6 hours straight. Highly recommended for any event.' },
             { name: 'Harsh Ramani', role: 'Corporate Event', text: 'Professional crew and amazing lighting. They handled everything perfectly from start to finish.' },
           ].map((t, i) => (
-            <motion.div 
-              key={i} 
+            <motion.div
+              key={i}
               whileHover={{ y: -10 }}
               className="glass-card testimonial-card"
             >
@@ -503,9 +596,9 @@ const App = () => {
             {faqs.map((faq, i) => {
               const isOpen = openFaqIndex === i;
               return (
-                <div 
-                  key={i} 
-                  className={`glass-card faq-item ${isOpen ? 'active' : ''}`} 
+                <div
+                  key={i}
+                  className={`glass-card faq-item ${isOpen ? 'active' : ''}`}
                   style={{ padding: '0', cursor: 'pointer' }}
                   onClick={() => setOpenFaqIndex(isOpen ? -1 : i)}
                 >
@@ -522,7 +615,7 @@ const App = () => {
                       <ChevronDown size={22} />
                     </motion.div>
                   </div>
-                  
+
                   <AnimatePresence>
                     {isOpen && (
                       <motion.div
@@ -654,7 +747,7 @@ const App = () => {
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.42a2.78 2.78 0 0 0-1.94 2C1 8.11 1 12 1 12s0 3.89.46 5.58a2.78 2.78 0 0 0 1.94 2c1.72.42 8.6.42 8.6.42s6.88 0 8.6-.42a2.78 2.78 0 0 0 1.94-2C23 15.89 23 12 23 12s0-3.89-.46-5.58z"></path><polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02"></polygon></svg>
               </a>
               <a href="https://wa.me/919624047940" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp" className="social-icon">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" /></svg>
               </a>
             </div>
           </div>
@@ -728,15 +821,15 @@ const App = () => {
             </motion.button>
           )}
         </AnimatePresence>
-        
-        <a 
-          href="https://wa.me/919624047940" 
-          target="_blank" 
-          rel="noopener noreferrer" 
+
+        <a
+          href="https://wa.me/919624047940"
+          target="_blank"
+          rel="noopener noreferrer"
           className="float-btn float-whatsapp"
           aria-label="WhatsApp"
         >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" /></svg>
         </a>
       </div>
     </div>
