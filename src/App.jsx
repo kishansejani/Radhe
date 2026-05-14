@@ -94,115 +94,10 @@ const CustomCursor = () => {
         y: position.y - 10,
         scale: isPointer ? 2.5 : 1,
         backgroundColor: isPointer ? 'rgba(251,191,36,0.3)' : 'rgba(139,92,246,0.5)',
-        border: isPointer ? '1px solid rgba(251,191,36,0.6)' : '1px solid rgba(139,92,246,0.2)',
       }}
       transition={{ type: 'spring', damping: 25, stiffness: 250, mass: 0.5 }}
     />
   );
-};
-
-const ScrollProgressBar = () => {
-  const [scrollProgress, setScrollProgress] = useState(0);
-
-  React.useEffect(() => {
-    const handleScroll = () => {
-      const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
-      const progress = (window.scrollY / totalHeight) * 100;
-      setScrollProgress(progress);
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  return (
-    <div 
-      className="scroll-progress-bar" 
-      style={{ 
-        width: `${scrollProgress}%`,
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        height: '4px',
-        background: 'linear-gradient(90deg, #fbbf24, #ec4899, #8b5cf6)',
-        zIndex: 9999,
-        boxShadow: '0 0 15px rgba(251, 191, 36, 0.4)'
-      }} 
-    />
-  );
-};
-
-const AudioExperience = () => {
-  const initialized = React.useRef(false);
-  
-  const tracks = [
-    'https://cdn.pixabay.com/audio/2022/10/18/audio_31c29096a0.mp3',
-    'https://cdn.pixabay.com/audio/2022/01/18/audio_d0c6ff1725.mp3',
-    'https://cdn.pixabay.com/audio/2021/11/23/audio_0ed24b8900.mp3',
-    'https://cdn.pixabay.com/audio/2022/03/10/audio_c8c8a73a56.mp3'
-  ];
-
-  const playExperience = React.useCallback(() => {
-    if (initialized.current) return;
-    
-    try {
-      // 1. Setup Audio
-      const randomTrack = tracks[Math.floor(Math.random() * tracks.length)];
-      const audio = new Audio(randomTrack);
-      audio.loop = true;
-      audio.volume = 0.5;
-
-      // 2. Setup Voice
-      const speech = new SpeechSynthesisUtterance();
-      speech.text = "Radhe DJ and Event aapka swagat krte hai";
-      speech.lang = 'hi-IN';
-      speech.rate = 0.9;
-
-      // 3. Fire everything!
-      window.speechSynthesis.cancel(); // Clear any stuck speech
-      window.speechSynthesis.speak(speech);
-      
-      const playPromise = audio.play();
-      if (playPromise !== undefined) {
-        playPromise.then(() => {
-          initialized.current = true;
-          console.log("Audio started successfully!");
-        }).catch(err => {
-          console.log("Audio play blocked by browser:", err);
-          initialized.current = false;
-        });
-      }
-    } catch (e) {
-      console.error("Audio trigger error:", e);
-    }
-  }, []);
-
-  React.useEffect(() => {
-    // Try on load
-    playExperience();
-
-    // Listen for any interaction
-    const handleInteraction = () => {
-      playExperience();
-      if (initialized.current) {
-        ['mousedown', 'scroll', 'touchstart', 'keydown'].forEach(e => 
-          window.removeEventListener(e, handleInteraction)
-        );
-      }
-    };
-
-    ['mousedown', 'scroll', 'touchstart', 'keydown'].forEach(e => 
-      window.addEventListener(e, handleInteraction, { passive: true })
-    );
-
-    return () => {
-      ['mousedown', 'scroll', 'touchstart', 'keydown'].forEach(e => 
-        window.removeEventListener(e, handleInteraction)
-      );
-    };
-  }, [playExperience]);
-
-  return null;
 };
 
 const App = () => {
@@ -282,9 +177,6 @@ const App = () => {
 
   return (
     <div className="min-h-screen">
-      <AudioExperience />
-      <CustomCursor />
-      <ScrollProgressBar />
 
       {/* ─────────────── NAVIGATION ─────────────── */}
       <nav>
