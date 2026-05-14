@@ -260,14 +260,14 @@ const App = () => {
             ✦ The Ultimate Party Experience ✦
           </motion.div>
 
-          <motion.h1
+          <motion.h2
             initial={{ opacity: 0, y: 60 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.25, type: 'spring', stiffness: 90 }}
             className="playfair hero-title"
           >
             RADHE <span className="purple-gradient">DJ</span>
-          </motion.h1>
+          </motion.h2>
 
           <motion.p
             initial={{ opacity: 0 }}
