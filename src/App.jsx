@@ -145,46 +145,61 @@ const AudioExperience = () => {
   const playExperience = React.useCallback(() => {
     if (initialized.current) return;
     
-    // 1. Voice Greeting
-    const speech = new SpeechSynthesisUtterance();
-    speech.text = "Radhe DJ and Event aapka swagat krte hai";
-    speech.lang = 'hi-IN';
-    speech.rate = 0.85;
+    try {
+      // 1. Setup Audio
+      const randomTrack = tracks[Math.floor(Math.random() * tracks.length)];
+      const audio = new Audio(randomTrack);
+      audio.loop = true;
+      audio.volume = 0.5;
 
-    // 2. Music
-    const randomTrack = tracks[Math.floor(Math.random() * tracks.length)];
-    const audio = new Audio(randomTrack);
-    audio.loop = true;
-    audio.volume = 0.35;
+      // 2. Setup Voice
+      const speech = new SpeechSynthesisUtterance();
+      speech.text = "Radhe DJ and Event aapka swagat krte hai";
+      speech.lang = 'hi-IN';
+      speech.rate = 0.9;
 
-    // Trigger Speech
-    window.speechSynthesis.speak(speech);
-    
-    speech.onstart = () => {
-      initialized.current = true; // Mark as started once speech begins
-      setTimeout(() => {
-        audio.play().catch(() => {
-          initialized.current = false; // Allow retry if blocked
+      // 3. Fire everything!
+      window.speechSynthesis.cancel(); // Clear any stuck speech
+      window.speechSynthesis.speak(speech);
+      
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.then(() => {
+          initialized.current = true;
+          console.log("Audio started successfully!");
+        }).catch(err => {
+          console.log("Audio play blocked by browser:", err);
+          initialized.current = false;
         });
-      }, 800);
-    };
+      }
+    } catch (e) {
+      console.error("Audio trigger error:", e);
+    }
   }, []);
 
   React.useEffect(() => {
-    // Attempt auto-play on load
+    // Try on load
     playExperience();
 
-    // Interaction fallback
-    const triggerEvents = ['mousedown', 'keydown', 'touchstart', 'scroll'];
-    const handleTrigger = () => {
+    // Listen for any interaction
+    const handleInteraction = () => {
       playExperience();
       if (initialized.current) {
-        triggerEvents.forEach(e => window.removeEventListener(e, handleTrigger));
+        ['mousedown', 'scroll', 'touchstart', 'keydown'].forEach(e => 
+          window.removeEventListener(e, handleInteraction)
+        );
       }
     };
 
-    triggerEvents.forEach(e => window.addEventListener(e, handleTrigger));
-    return () => triggerEvents.forEach(e => window.removeEventListener(e, handleTrigger));
+    ['mousedown', 'scroll', 'touchstart', 'keydown'].forEach(e => 
+      window.addEventListener(e, handleInteraction, { passive: true })
+    );
+
+    return () => {
+      ['mousedown', 'scroll', 'touchstart', 'keydown'].forEach(e => 
+        window.removeEventListener(e, handleInteraction)
+      );
+    };
   }, [playExperience]);
 
   return null;
