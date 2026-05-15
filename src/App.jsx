@@ -407,11 +407,12 @@ const App = () => {
                 '--accent-rgb': hexToRgb(s.color)
               }}
             >
+              <div className="process-number-badge">{i + 1}</div>
               <div className="process-bg-number">{String(i + 1).padStart(2, '0')}</div>
-              <div className="process-icon-box" style={{ position: 'relative', z-index: 2 }}>
+              <div className="process-icon-box" style={{ position: 'relative', zIndex: 2 }}>
                 {s.icon}
               </div>
-              <h3 className="process-title" style={{ position: 'relative', z-index: 2 }}>{s.title}</h3>
+              <h3 className="process-title" style={{ position: 'relative', zIndex: 2 }}>{s.title}</h3>
               <p className="process-desc">{s.desc}</p>
             </motion.div>
           ))}
