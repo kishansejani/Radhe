@@ -108,9 +108,24 @@ const BubbleBackground = () => {
 const CustomCursor = () => {
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isPointer, setIsPointer] = useState(false);
+  const [trail, setTrail] = useState([]);
 
   React.useEffect(() => {
-    const handleMove = (e) => setPosition({ x: e.clientX, y: e.clientY });
+    const handleMove = (e) => {
+      setPosition({ x: e.clientX, y: e.clientY });
+      
+      // Add a star to the trail
+      const newStar = {
+        id: Date.now() + Math.random(),
+        x: e.clientX,
+        y: e.clientY,
+        size: Math.random() * 10 + 5,
+        rotation: Math.random() * 360,
+      };
+      
+      setTrail(prev => [...prev.slice(-15), newStar]);
+    };
+    
     const handlePointer = () => setIsPointer(true);
     const handleNormal = () => setIsPointer(false);
 
@@ -123,7 +138,6 @@ const CustomCursor = () => {
     };
 
     updatePointers();
-    // Re-run if DOM changes (simplified)
     const observer = new MutationObserver(updatePointers);
     observer.observe(document.body, { childList: true, subtree: true });
 
@@ -135,6 +149,31 @@ const CustomCursor = () => {
 
   return (
     <>
+      <AnimatePresence>
+        {trail.map((star) => (
+          <motion.div
+            key={star.id}
+            initial={{ opacity: 1, scale: 1 }}
+            animate={{ opacity: 0, scale: 0, y: star.y + (Math.random() * 40 - 20) }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.8 }}
+            className="cursor-star"
+            style={{
+              position: 'fixed',
+              left: star.x,
+              top: star.y,
+              width: star.size,
+              height: star.size,
+              pointerEvents: 'none',
+              zIndex: 9997,
+              color: 'var(--primary-gold)',
+            }}
+          >
+            <Star size={star.size} fill="currentColor" style={{ transform: `rotate(${star.rotation}deg)` }} />
+          </motion.div>
+        ))}
+      </AnimatePresence>
+
       <motion.div
         className="cursor-dot"
         animate={{
@@ -233,28 +272,6 @@ const App = () => {
     { q: 'Can we customize the lighting?', a: 'Absolutely — we can match lighting colors and effects to your exact wedding theme.' },
   ];
 
-  const processSteps = [
-    {
-      title: 'Consultation & Design',
-      desc: 'Share your vision with us, and our expert designers will craft a perfect mockup for your approval.',
-      icon: <Send size={24} />
-    },
-    {
-      title: 'Quality Proofing',
-      desc: 'We double-check every detail, from sound accuracy to lighting setup, ensuring zero errors.',
-      icon: <CheckCircle2 size={24} />
-    },
-    {
-      title: 'Precision Execution',
-      desc: 'Using state-of-the-art machinery, we execute your event with vibrant colors and premium finishes.',
-      icon: <Zap size={24} />
-    },
-    {
-      title: 'Final Success',
-      desc: 'Your event is carefully managed and delivered on time, ready to make an impact.',
-      icon: <Users size={24} />
-    }
-  ];
 
   return (
     <div className="min-h-screen">
@@ -454,29 +471,8 @@ const App = () => {
           <div style={{ width: '70px', height: '3px', background: 'linear-gradient(90deg,#8b5cf6,#fbbf24)', margin: '0 auto', borderRadius: '100px' }} />
         </div>
 
-        <div className="services-grid">
-          {services.map((s, i) => (
-            <motion.div key={i} whileHover={{ y: -8 }} className="glass-card" style={{ textAlign: 'center' }}>
-              <div style={{ color: '#fbbf24', marginBottom: '1.5rem', display: 'flex', justifyContent: 'center' }}>{s.icon}</div>
-              <h3 style={{ fontSize: '1.25rem', marginBottom: '0.9rem', fontWeight: 700 }}>{s.title}</h3>
-              <p style={{ color: '#94a3b8', fontSize: '0.92rem', lineHeight: 1.8 }}>{s.desc}</p>
-            </motion.div>
-          ))}
-        </div>
-      </section>
-
-      {/* ─────────────── PROCESS (IMAGE 2 STYLE) ─────────────── */}
-      <section className="section-padding relative" style={{ background: 'var(--deep-bg)' }}>
-        <GlowingBlobs />
-        <div className="text-center relative z-10" style={{ marginBottom: '3rem' }}>
-          <div className="badge">Our Workflow</div>
-          <h2 style={{ fontSize: 'clamp(1.8rem, 4vw, 3.2rem)' }}>
-            How We <span className="royal-gradient">Work</span>
-          </h2>
-        </div>
-
         <div className="process-grid">
-          {processSteps.map((step, i) => (
+          {services.map((s, i) => (
             <motion.div
               key={i}
               initial={{ opacity: 0, y: 30 }}
@@ -487,15 +483,15 @@ const App = () => {
             >
               <div className="process-number">{i + 1}</div>
               <div className="process-icon-box">
-                {step.icon}
+                {s.icon}
               </div>
-              <h3 className="process-title">{step.title}</h3>
-              <p className="process-desc">{step.desc}</p>
-              {i < processSteps.length - 1 && <div className="process-connector" />}
+              <h3 className="process-title">{s.title}</h3>
+              <p className="process-desc">{s.desc}</p>
             </motion.div>
           ))}
         </div>
       </section>
+
 
 
       {/* ─────────────── GALLERY ─────────────── */}
