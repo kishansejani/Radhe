@@ -657,14 +657,9 @@ nav::after {
   border: 1px solid rgba(6, 182, 212, 0.2);
 }
 
-.process-card:nth-child(2) .process-icon-box { background: rgba(139, 92, 246, 0.1); color: var(--royal-purple); border-color: rgba(139, 92, 246, 0.2); }
-.process-card:nth-child(3) .process-icon-box { background: rgba(16, 185, 129, 0.1); color: #10b981; border-color: rgba(16, 185, 129, 0.2); }
-.process-card:nth-child(4) .process-icon-box { background: rgba(244, 63, 94, 0.1); color: #f43f5e; border-color: rgba(244, 63, 94, 0.2); }
-
-.process-card:nth-child(1) .process-number { background: linear-gradient(135deg, #0ea5e9, #0284c7); box-shadow: 0 5px 15px rgba(14, 165, 233, 0.4); }
-.process-card:nth-child(2) .process-number { background: linear-gradient(135deg, #8b5cf6, #7c3aed); box-shadow: 0 5px 15px rgba(139, 92, 246, 0.4); }
-.process-card:nth-child(3) .process-number { background: linear-gradient(135deg, #10b981, #059669); box-shadow: 0 5px 15px rgba(16, 185, 129, 0.4); }
-.process-card:nth-child(4) .process-number { background: linear-gradient(135deg, #f43f5e, #e11d48); box-shadow: 0 5px 15px rgba(244, 63, 94, 0.4); }
+.process-card.dynamic-card .process-icon-box { background: rgba(var(--accent-rgb, 6, 182, 212), 0.1); color: var(--accent-color); border-color: rgba(var(--accent-rgb, 6, 182, 212), 0.2); }
+.process-card.dynamic-card .process-number { background: var(--accent-color); box-shadow: 0 5px 15px rgba(var(--accent-rgb, 6, 182, 212), 0.4); }
+.process-card.dynamic-card:hover { border-color: var(--accent-color); box-shadow: 0 20px 40px rgba(var(--accent-rgb, 6, 182, 212), 0.2); }
 
 .process-title {
   font-size: 1.4rem;

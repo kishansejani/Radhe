@@ -45,64 +45,10 @@ const GlowingBlobs = () => {
   );
 };
 
-const BubbleBackground = () => {
-  const bubbles = React.useMemo(() => [...Array(40)].map((_, i) => ({
-    id: i,
-    size: Math.random() * 50 + 15,
-    left: `${Math.random() * 100}%`,
-    duration: Math.random() * 12 + 8,
-    delay: Math.random() * 10,
-    opacity: Math.random() * 0.4 + 0.1,
-    color: i % 3 === 0 ? 'var(--royal-purple)' : i % 3 === 1 ? 'var(--primary-gold)' : 'var(--vibrant-pink)',
-    wobble: Math.random() * 100 - 50,
-  })), []);
 
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none z-10">
-      {bubbles.map((b) => (
-        <motion.div
-          key={b.id}
-          className="absolute"
-          style={{
-            width: b.size,
-            height: b.size,
-            left: b.left,
-            bottom: '-10%',
-            borderRadius: '50%',
-            background: `radial-gradient(circle at 30% 30%, rgba(255,255,255,0.6), ${b.color})`,
-            boxShadow: `0 0 20px ${b.color}66`,
-            border: '1px solid rgba(255,255,255,0.3)',
-            backdropFilter: 'blur(2px)',
-          }}
-          animate={{
-            y: [0, -1100],
-            x: [0, b.wobble, 0],
-            opacity: [0, b.opacity, 0],
-            scale: [0.7, 1.1, 0.7],
-          }}
-          transition={{
-            duration: b.duration,
-            repeat: Infinity,
-            delay: b.delay,
-            ease: "linear"
-          }}
-        />
-      ))}
-
-      {/* Central Pulsing Glow to maintain depth */}
-      <motion.div
-        className="absolute inset-0 z-0"
-        animate={{
-          background: [
-            'radial-gradient(circle at 50% 50%, rgba(139,92,246,0.1) 0%, transparent 70%)',
-            'radial-gradient(circle at 50% 50%, rgba(139,92,246,0.18) 0%, transparent 70%)',
-            'radial-gradient(circle at 50% 50%, rgba(139,92,246,0.1) 0%, transparent 70%)'
-          ]
-        }}
-        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-      />
-    </div>
-  );
+const hexToRgb = (hex) => {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : null;
 };
 
 const CustomCursor = () => {
@@ -239,15 +185,15 @@ const App = () => {
   ];
 
   const services = [
-    { title: 'Exclusive DJ', icon: <Music size={36} />, desc: 'High-end sound systems and professional mixing for all events.' },
-    { title: 'Cold Pyro Fire', icon: <Flame size={36} />, desc: 'Breathtaking cold spark fountains for grand entrances.' },
-    { title: 'Hand Cold Pyro', icon: <Flame size={36} />, desc: 'Safe and spectacular hand-held pyro effects.' },
-    { title: 'Paper Blast', icon: <PartyPopper size={36} />, desc: 'Colorful confetti blasts to celebrate your special moments.' },
-    { title: 'Ribbon Blast', icon: <Star size={36} />, desc: 'Elegant ribbon displays for a festive atmosphere.' },
-    { title: 'Balloon Blast Entry', icon: <Sparkles size={36} />, desc: 'Grand balloon explosions for dramatic entries.' },
-    { title: 'Matka Smoke', icon: <Wind size={36} />, desc: 'Low-lying fog effects for a dreamy stage presence.' },
-    { title: 'Pro Lighting', icon: <Zap size={36} />, desc: 'Intelligent stage lighting and ambient decor lights.' },
-    { title: 'Experience Crew', icon: <Users size={36} />, desc: 'Dedicated team to manage every detail of your event.' },
+    { title: 'Exclusive DJ', icon: <Music size={36} />, desc: 'High-end sound systems and professional mixing for all events.', color: '#06b6d4' },
+    { title: 'Cold Pyro Fire', icon: <Flame size={36} />, desc: 'Breathtaking cold spark fountains for grand entrances.', color: '#8b5cf6' },
+    { title: 'Hand Cold Pyro', icon: <Flame size={36} />, desc: 'Safe and spectacular hand-held pyro effects.', color: '#10b981' },
+    { title: 'Paper Blast', icon: <PartyPopper size={36} />, desc: 'Colorful confetti blasts to celebrate your special moments.', color: '#f43f5e' },
+    { title: 'Ribbon Blast', icon: <Star size={36} />, desc: 'Elegant ribbon displays for a festive atmosphere.', color: '#0ea5e9' },
+    { title: 'Balloon Blast Entry', icon: <Sparkles size={36} />, desc: 'Grand balloon explosions for dramatic entries.', color: '#2dd4bf' },
+    { title: 'Matka Smoke', icon: <Wind size={36} />, desc: 'Low-lying fog effects for a dreamy stage presence.', color: '#3b82f6' },
+    { title: 'Pro Lighting', icon: <Zap size={36} />, desc: 'Intelligent stage lighting and ambient decor lights.', color: '#6366f1' },
+    { title: 'Experience Crew', icon: <Users size={36} />, desc: 'Dedicated team to manage every detail of your event.', color: '#f59e0b' },
   ];
 
   const packages = [
@@ -345,8 +291,6 @@ const App = () => {
             style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.28 }}
           />
           <div className="absolute inset-0 hero-overlay" />
-
-          <BubbleBackground />
         </div>
 
         <div className="hero-content">
@@ -479,7 +423,11 @@ const App = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.1 }}
-              className="process-card"
+              className="process-card dynamic-card"
+              style={{ 
+                '--accent-color': s.color,
+                '--accent-rgb': hexToRgb(s.color)
+              }}
             >
               <div className="process-number">{i + 1}</div>
               <div className="process-icon-box">
