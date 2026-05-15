@@ -52,14 +52,11 @@ const hexToRgb = (hex) => {
 };
 
 const CustomCursor = () => {
-  const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isPointer, setIsPointer] = useState(false);
   const [trail, setTrail] = useState([]);
 
   React.useEffect(() => {
     const handleMove = (e) => {
-      setPosition({ x: e.clientX, y: e.clientY });
-      
       // Add a star to the trail
       const newStar = {
         id: Date.now() + Math.random(),
@@ -94,52 +91,30 @@ const CustomCursor = () => {
   }, []);
 
   return (
-    <>
-      <AnimatePresence>
-        {trail.map((star) => (
-          <motion.div
-            key={star.id}
-            initial={{ opacity: 1, scale: 1 }}
-            animate={{ opacity: 0, scale: 0, y: star.y + (Math.random() * 40 - 20) }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.8 }}
-            className="cursor-star"
-            style={{
-              position: 'fixed',
-              left: star.x,
-              top: star.y,
-              width: star.size,
-              height: star.size,
-              pointerEvents: 'none',
-              zIndex: 9997,
-              color: 'var(--primary-gold)',
-            }}
-          >
-            <Star size={star.size} fill="currentColor" style={{ transform: `rotate(${star.rotation}deg)` }} />
-          </motion.div>
-        ))}
-      </AnimatePresence>
-
-      <motion.div
-        className="cursor-dot"
-        animate={{
-          x: position.x - 4,
-          y: position.y - 4,
-          scale: isPointer ? 1.5 : 1,
-        }}
-        transition={{ type: 'spring', damping: 30, stiffness: 400, mass: 0.1 }}
-      />
-      <motion.div
-        className="cursor-outline"
-        animate={{
-          x: position.x - 18,
-          y: position.y - 18,
-          scale: isPointer ? 1.8 : 1,
-          borderColor: isPointer ? 'var(--primary-gold)' : 'var(--cyan-primary)',
-        }}
-        transition={{ type: 'spring', damping: 25, stiffness: 150, mass: 0.5 }}
-      />
-    </>
+    <AnimatePresence>
+      {trail.map((star) => (
+        <motion.div
+          key={star.id}
+          initial={{ opacity: 1, scale: 1 }}
+          animate={{ opacity: 0, scale: 0, y: star.y + (Math.random() * 40 - 20) }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.8 }}
+          className="cursor-star"
+          style={{
+            position: 'fixed',
+            left: star.x,
+            top: star.y,
+            width: star.size,
+            height: star.size,
+            pointerEvents: 'none',
+            zIndex: 9997,
+            color: 'var(--primary-gold)',
+          }}
+        >
+          <Star size={star.size} fill="currentColor" style={{ transform: `rotate(${star.rotation}deg)` }} />
+        </motion.div>
+      ))}
+    </AnimatePresence>
   );
 };
 
@@ -186,14 +161,14 @@ const App = () => {
 
   const services = [
     { title: 'Exclusive DJ', icon: <Music size={36} />, desc: 'High-end sound systems and professional mixing for all events.', color: '#06b6d4' },
-    { title: 'Cold Pyro Fire', icon: <Flame size={36} />, desc: 'Breathtaking cold spark fountains for grand entrances.', color: '#8b5cf6' },
+    { title: 'Cold Pyro Fire', icon: <Flame size={36} />, desc: 'Breathtaking cold spark fountains for grand entrances.', color: '#a855f7' },
     { title: 'Hand Cold Pyro', icon: <Flame size={36} />, desc: 'Safe and spectacular hand-held pyro effects.', color: '#10b981' },
     { title: 'Paper Blast', icon: <PartyPopper size={36} />, desc: 'Colorful confetti blasts to celebrate your special moments.', color: '#f43f5e' },
     { title: 'Ribbon Blast', icon: <Star size={36} />, desc: 'Elegant ribbon displays for a festive atmosphere.', color: '#0ea5e9' },
-    { title: 'Balloon Blast Entry', icon: <Sparkles size={36} />, desc: 'Grand balloon explosions for dramatic entries.', color: '#2dd4bf' },
+    { title: 'Balloon Blast Entry', icon: <Sparkles size={36} />, desc: 'Grand balloon explosions for dramatic entries.', color: '#fbbf24' },
     { title: 'Matka Smoke', icon: <Wind size={36} />, desc: 'Low-lying fog effects for a dreamy stage presence.', color: '#3b82f6' },
-    { title: 'Pro Lighting', icon: <Zap size={36} />, desc: 'Intelligent stage lighting and ambient decor lights.', color: '#6366f1' },
-    { title: 'Experience Crew', icon: <Users size={36} />, desc: 'Dedicated team to manage every detail of your event.', color: '#f59e0b' },
+    { title: 'Pro Lighting', icon: <Zap size={36} />, desc: 'Intelligent stage lighting and ambient decor lights.', color: '#ec4899' },
+    { title: 'Experience Crew', icon: <Users size={36} />, desc: 'Dedicated team to manage every detail of your event.', color: '#14b8a6' },
   ];
 
   const packages = [
@@ -429,11 +404,11 @@ const App = () => {
                 '--accent-rgb': hexToRgb(s.color)
               }}
             >
-              <div className="process-number">{i + 1}</div>
-              <div className="process-icon-box">
+              <div className="process-bg-number">{String(i + 1).padStart(2, '0')}</div>
+              <div className="process-icon-box" style={{ position: 'relative', z-index: 2 }}>
                 {s.icon}
               </div>
-              <h3 className="process-title">{s.title}</h3>
+              <h3 className="process-title" style={{ position: 'relative', z-index: 2 }}>{s.title}</h3>
               <p className="process-desc">{s.desc}</p>
             </motion.div>
           ))}
