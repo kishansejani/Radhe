@@ -73,6 +73,9 @@ const CustomCursor = () => {
     const handleNormal = () => setIsPointer(false);
 
     window.addEventListener('mousemove', handleMove);
+    window.addEventListener('touchstart', (e) => handleMove(e.touches[0]));
+    window.addEventListener('touchmove', (e) => handleMove(e.touches[0]));
+    
     const updatePointers = () => {
       document.querySelectorAll('a, button, .faq-item, .glass-card, .process-card').forEach(el => {
         el.addEventListener('mouseenter', handlePointer);

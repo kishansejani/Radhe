@@ -67,14 +67,7 @@ button {
   font-family: inherit;
 }
 
-/* ============================================
-   CUSTOM CURSOR
-============================================ */
-@media (max-width: 1024px) {
-  .cursor-star {
-    display: none;
-  }
-}
+/* Custom cursor enabled on all devices */
 
 /* ============================================
    TYPOGRAPHY
