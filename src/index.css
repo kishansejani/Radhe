@@ -608,16 +608,17 @@ nav::after {
   right: 25px;
   background: rgba(var(--accent-rgb), 0.1);
   color: var(--accent-color);
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 800;
-  font-size: 0.8rem;
-  border: 1px solid rgba(var(--accent-rgb), 0.2);
+  font-size: 1.1rem;
+  border: 1px solid rgba(var(--accent-rgb), 0.25);
   z-index: 5;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .process-icon-box {
