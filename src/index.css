@@ -18,6 +18,8 @@
   --text-muted: #94a3b8;
   --text-dim: #475569;
   --glass-border: rgba(255, 255, 255, 0.06);
+  --cyan-primary: #06b6d4;
+  --cyan-glow: rgba(6, 182, 212, 0.5);
 }
 
 /* ============================================
@@ -42,6 +44,11 @@ body {
   overflow-x: hidden;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  cursor: none;
+}
+
+a, button, [role="button"], input, textarea, select {
+  cursor: none !important;
 }
 
 img {
@@ -58,6 +65,42 @@ input,
 textarea,
 button {
   font-family: inherit;
+}
+
+/* ============================================
+   CUSTOM CURSOR
+============================================ */
+.cursor-dot {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 8px;
+  height: 8px;
+  background-color: var(--cyan-primary);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9999;
+  box-shadow: 0 0 10px var(--cyan-primary);
+}
+
+.cursor-outline {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 36px;
+  height: 36px;
+  border: 2px solid var(--cyan-primary);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9998;
+  transition: width 0.3s, height 0.3s;
+  box-shadow: 0 0 15px rgba(6, 182, 212, 0.3);
+}
+
+@media (max-width: 1024px) {
+  .cursor-dot, .cursor-outline {
+    display: none;
+  }
 }
 
 /* ============================================
@@ -543,6 +586,111 @@ nav::after {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 18px;
+}
+
+/* ============================================
+   PROCESS SECTION (IMAGE 2 STYLE)
+============================================ */
+.process-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 30px;
+  margin-top: 50px;
+}
+
+.process-card {
+  position: relative;
+  background: rgba(13, 21, 48, 0.6);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  padding: 45px 30px 30px;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: left;
+}
+
+.process-card:hover {
+  transform: translateY(-10px);
+  background: rgba(13, 21, 48, 0.8);
+  border-color: rgba(6, 182, 212, 0.3);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.process-number {
+  position: absolute;
+  top: -20px;
+  left: 30px;
+  width: 45px;
+  height: 45px;
+  background: linear-gradient(135deg, #06b6d4, #0891b2);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 1.2rem;
+  color: white;
+  box-shadow: 0 5px 15px rgba(6, 182, 212, 0.4);
+  z-index: 2;
+}
+
+.process-number::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #06b6d4, transparent);
+  z-index: -1;
+  opacity: 0.5;
+}
+
+.process-icon-box {
+  width: 60px;
+  height: 60px;
+  background: rgba(6, 182, 212, 0.1);
+  border-radius: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 25px;
+  color: var(--cyan-primary);
+  border: 1px solid rgba(6, 182, 212, 0.2);
+}
+
+.process-card:nth-child(2) .process-icon-box { background: rgba(139, 92, 246, 0.1); color: var(--royal-purple); border-color: rgba(139, 92, 246, 0.2); }
+.process-card:nth-child(3) .process-icon-box { background: rgba(16, 185, 129, 0.1); color: #10b981; border-color: rgba(16, 185, 129, 0.2); }
+.process-card:nth-child(4) .process-icon-box { background: rgba(244, 63, 94, 0.1); color: #f43f5e; border-color: rgba(244, 63, 94, 0.2); }
+
+.process-card:nth-child(1) .process-number { background: linear-gradient(135deg, #0ea5e9, #0284c7); box-shadow: 0 5px 15px rgba(14, 165, 233, 0.4); }
+.process-card:nth-child(2) .process-number { background: linear-gradient(135deg, #8b5cf6, #7c3aed); box-shadow: 0 5px 15px rgba(139, 92, 246, 0.4); }
+.process-card:nth-child(3) .process-number { background: linear-gradient(135deg, #10b981, #059669); box-shadow: 0 5px 15px rgba(16, 185, 129, 0.4); }
+.process-card:nth-child(4) .process-number { background: linear-gradient(135deg, #f43f5e, #e11d48); box-shadow: 0 5px 15px rgba(244, 63, 94, 0.4); }
+
+.process-title {
+  font-size: 1.4rem;
+  font-weight: 800;
+  margin-bottom: 15px;
+  color: white;
+}
+
+.process-desc {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.process-connector {
+  position: absolute;
+  top: 50%;
+  right: -25px;
+  width: 20px;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.1), transparent);
+  z-index: 1;
+}
+
+@media (max-width: 1024px) {
+  .process-connector { display: none; }
 }
 
 .gallery-card {

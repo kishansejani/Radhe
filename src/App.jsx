@@ -6,6 +6,45 @@ import {
   Image as ImageIcon, Send, Menu, X, Camera, Play, ChevronDown, ArrowUp
 } from 'lucide-react';
 
+const GlowingBlobs = () => {
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+      <motion.div
+        className="absolute"
+        style={{
+          width: '400px',
+          height: '400px',
+          background: 'radial-gradient(circle, rgba(139, 92, 246, 0.15) 0%, transparent 70%)',
+          top: '10%',
+          left: '-10%',
+          filter: 'blur(60px)',
+        }}
+        animate={{
+          x: [0, 50, 0],
+          y: [0, 30, 0],
+        }}
+        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+      />
+      <motion.div
+        className="absolute"
+        style={{
+          width: '500px',
+          height: '500px',
+          background: 'radial-gradient(circle, rgba(6, 182, 212, 0.1) 0%, transparent 70%)',
+          bottom: '10%',
+          right: '-10%',
+          filter: 'blur(80px)',
+        }}
+        animate={{
+          x: [0, -40, 0],
+          y: [0, -60, 0],
+        }}
+        transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
+      />
+    </div>
+  );
+};
+
 const BubbleBackground = () => {
   const bubbles = React.useMemo(() => [...Array(40)].map((_, i) => ({
     id: i,
@@ -76,27 +115,46 @@ const CustomCursor = () => {
     const handleNormal = () => setIsPointer(false);
 
     window.addEventListener('mousemove', handleMove);
-    document.querySelectorAll('a, button, .faq-item').forEach(el => {
-      el.addEventListener('mouseenter', handlePointer);
-      el.addEventListener('mouseleave', handleNormal);
-    });
+    const updatePointers = () => {
+      document.querySelectorAll('a, button, .faq-item, .glass-card, .process-card').forEach(el => {
+        el.addEventListener('mouseenter', handlePointer);
+        el.addEventListener('mouseleave', handleNormal);
+      });
+    };
+
+    updatePointers();
+    // Re-run if DOM changes (simplified)
+    const observer = new MutationObserver(updatePointers);
+    observer.observe(document.body, { childList: true, subtree: true });
 
     return () => {
       window.removeEventListener('mousemove', handleMove);
+      observer.disconnect();
     };
   }, []);
 
   return (
-    <motion.div
-      className="custom-cursor"
-      animate={{
-        x: position.x - 10,
-        y: position.y - 10,
-        scale: isPointer ? 2.5 : 1,
-        backgroundColor: isPointer ? 'rgba(251,191,36,0.3)' : 'rgba(139,92,246,0.5)',
-      }}
-      transition={{ type: 'spring', damping: 25, stiffness: 250, mass: 0.5 }}
-    />
+    <>
+      <motion.div
+        className="cursor-dot"
+        animate={{
+          x: position.x - 4,
+          y: position.y - 4,
+          scale: isPointer ? 1.5 : 1,
+        }}
+        transition={{ type: 'spring', damping: 30, stiffness: 400, mass: 0.1 }}
+      />
+      <motion.div
+        className="cursor-outline"
+        animate={{
+          x: position.x - 18,
+          y: position.y - 18,
+          scale: isPointer ? 1.8 : 1,
+          borderColor: isPointer ? 'var(--primary-gold)' : 'var(--cyan-primary)',
+        }}
+        transition={{ type: 'spring', damping: 25, stiffness: 150, mass: 0.5 }}
+      />
+    </>
   );
 };
 
@@ -175,8 +233,32 @@ const App = () => {
     { q: 'Can we customize the lighting?', a: 'Absolutely — we can match lighting colors and effects to your exact wedding theme.' },
   ];
 
+  const processSteps = [
+    {
+      title: 'Consultation & Design',
+      desc: 'Share your vision with us, and our expert designers will craft a perfect mockup for your approval.',
+      icon: <Send size={24} />
+    },
+    {
+      title: 'Quality Proofing',
+      desc: 'We double-check every detail, from sound accuracy to lighting setup, ensuring zero errors.',
+      icon: <CheckCircle2 size={24} />
+    },
+    {
+      title: 'Precision Execution',
+      desc: 'Using state-of-the-art machinery, we execute your event with vibrant colors and premium finishes.',
+      icon: <Zap size={24} />
+    },
+    {
+      title: 'Final Success',
+      desc: 'Your event is carefully managed and delivered on time, ready to make an impact.',
+      icon: <Users size={24} />
+    }
+  ];
+
   return (
     <div className="min-h-screen">
+      <CustomCursor />
 
       {/* ─────────────── NAVIGATION ─────────────── */}
       <nav>
@@ -362,8 +444,9 @@ const App = () => {
       </section>
 
       {/* ─────────────── SERVICES ─────────────── */}
-      <section id="services" className="section-padding" style={{ background: '#070b1d' }}>
-        <div className="text-center" style={{ marginBottom: '4rem' }}>
+      <section id="services" className="section-padding relative" style={{ background: '#070b1d' }}>
+        <GlowingBlobs />
+        <div className="text-center relative z-10" style={{ marginBottom: '4rem' }}>
           <div className="badge">Specialties</div>
           <h2 style={{ fontSize: 'clamp(1.8rem, 4vw, 3.2rem)', marginBottom: '1.2rem' }}>
             Our Signature <span className="royal-gradient">Services</span>
@@ -377,6 +460,38 @@ const App = () => {
               <div style={{ color: '#fbbf24', marginBottom: '1.5rem', display: 'flex', justifyContent: 'center' }}>{s.icon}</div>
               <h3 style={{ fontSize: '1.25rem', marginBottom: '0.9rem', fontWeight: 700 }}>{s.title}</h3>
               <p style={{ color: '#94a3b8', fontSize: '0.92rem', lineHeight: 1.8 }}>{s.desc}</p>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      {/* ─────────────── PROCESS (IMAGE 2 STYLE) ─────────────── */}
+      <section className="section-padding relative" style={{ background: 'var(--deep-bg)' }}>
+        <GlowingBlobs />
+        <div className="text-center relative z-10" style={{ marginBottom: '3rem' }}>
+          <div className="badge">Our Workflow</div>
+          <h2 style={{ fontSize: 'clamp(1.8rem, 4vw, 3.2rem)' }}>
+            How We <span className="royal-gradient">Work</span>
+          </h2>
+        </div>
+
+        <div className="process-grid">
+          {processSteps.map((step, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: i * 0.1 }}
+              className="process-card"
+            >
+              <div className="process-number">{i + 1}</div>
+              <div className="process-icon-box">
+                {step.icon}
+              </div>
+              <h3 className="process-title">{step.title}</h3>
+              <p className="process-desc">{step.desc}</p>
+              {i < processSteps.length - 1 && <div className="process-connector" />}
             </motion.div>
           ))}
         </div>
