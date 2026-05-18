@@ -174,7 +174,7 @@ const CustomCursor = () => {
             width: star.size,
             height: star.size,
             pointerEvents: 'none',
-            zIndex: 99999,
+            zIndex: 10000000,
             color: 'var(--primary-gold)',
           }}
         >
@@ -209,12 +209,26 @@ const App = () => {
   const [activeMedia, setActiveMedia] = useState(null);
 
   // Admin Portal states
-  const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [isAdminOpen, setIsAdminOpen] = useState(() => {
+    return localStorage.getItem('isAdminSessionActive') === 'true';
+  });
   const [isPasscodePromptOpen, setIsPasscodePromptOpen] = useState(false);
   const [enteredPasscode, setEnteredPasscode] = useState('');
   const [passcodeError, setPasscodeError] = useState('');
   const [adminTab, setAdminTab] = useState('hero');
-  const [draftData, setDraftData] = useState(null);
+  const [draftData, setDraftData] = useState(() => {
+    const isActive = localStorage.getItem('isAdminSessionActive') === 'true';
+    if (isActive) {
+      const cached = localStorage.getItem('radhe_site_data');
+      if (cached) {
+        try {
+          return JSON.parse(cached);
+        } catch (err) {}
+      }
+      return JSON.parse(JSON.stringify(initialData));
+    }
+    return null;
+  });
   const [saveStatus, setSaveStatus] = useState(null); // 'saving' | 'success' | 'error'
   const [saveMsg, setSaveMsg] = useState('');
 
@@ -258,6 +272,7 @@ const App = () => {
     if (enteredPasscode === correctPass) {
       setIsPasscodePromptOpen(false);
       setIsAdminOpen(true);
+      localStorage.setItem('isAdminSessionActive', 'true');
       setDraftData(JSON.parse(JSON.stringify(siteData))); // deep clone for safe drafting
       setPasscodeError('');
     } else {
@@ -370,6 +385,19 @@ const App = () => {
         {/* Desktop links */}
         <div className="nav-links">
           {navLinks.map(l => <a key={l.href} href={l.href}>{l.label}</a>)}
+          <button 
+            onClick={isAdminOpen ? () => setIsAdminOpen(true) : openPasscodePrompt} 
+            className="admin-interactive" 
+            style={{ 
+              background: 'none', border: 'none', color: '#fbbf24', cursor: 'pointer', fontSize: '0.9rem', 
+              fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', marginLeft: '12px',
+              padding: '0 6px', opacity: 0.85, transition: 'opacity 0.2s'
+            }}
+            onMouseEnter={(e) => e.target.style.opacity = 1}
+            onMouseLeave={(e) => e.target.style.opacity = 0.85}
+          >
+            <Lock size={12} /> Admin Portal
+          </button>
         </div>
 
         {/* Desktop CTA */}
@@ -402,7 +430,26 @@ const App = () => {
                 {l.label}
               </a>
             ))}
-            <a href={`tel:${siteData.contact.chintanPhoneRaw}`} className="btn-royal" style={{ justifyContent: 'center', marginTop: '1rem' }}>
+            <button 
+              onClick={() => {
+                setMenuOpen(false);
+                if (isAdminOpen) {
+                  setIsAdminOpen(true);
+                } else {
+                  openPasscodePrompt();
+                }
+              }}
+              className="admin-interactive" 
+              style={{ 
+                background: 'rgba(251, 191, 36, 0.08)', border: '1px solid rgba(251, 191, 36, 0.3)', 
+                color: '#fbbf24', cursor: 'pointer', fontSize: '0.95rem', borderRadius: '8px',
+                fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', 
+                padding: '12px 20px', width: '100%', marginTop: '0.8rem'
+              }}
+            >
+              <Lock size={14} /> Admin Portal
+            </button>
+            <a href={`tel:${siteData.contact.chintanPhoneRaw}`} className="btn-royal" style={{ justifyContent: 'center', marginTop: '0.8rem' }}>
               <Phone size={16} /> Call Now
             </a>
           </motion.div>
@@ -1216,7 +1263,11 @@ const App = () => {
                   <RotateCcw size={13} /> Factory Reset Data
                 </button>
                 <button
-                  onClick={() => setIsAdminOpen(false)}
+                  onClick={() => {
+                    localStorage.removeItem('isAdminSessionActive');
+                    setIsAdminOpen(false);
+                    setDraftData(null);
+                  }}
                   className="btn-glass admin-interactive"
                   style={{ width: '100%', padding: '10px', fontSize: '0.72rem', justifyContent: 'center', borderColor: 'rgba(255,255,255,0.15)' }}
                 >
