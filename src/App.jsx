@@ -493,8 +493,12 @@ const App = () => {
           {navLinks.map(l => <a key={l.href} href={l.href}>{l.label}</a>)}
           <button 
             onClick={() => {
+              localStorage.removeItem('isAdminSessionActive');
+              setIsAdminOpen(false);
+              setIsPasscodePromptOpen(true);
+              setEnteredPasscode('');
+              setPasscodeError('');
               window.history.pushState({}, '', '/admin');
-              window.dispatchEvent(new Event('popstate'));
             }} 
             className="admin-interactive" 
             style={{ 
@@ -542,8 +546,12 @@ const App = () => {
             <button 
               onClick={() => {
                 setMenuOpen(false);
+                localStorage.removeItem('isAdminSessionActive');
+                setIsAdminOpen(false);
+                setIsPasscodePromptOpen(true);
+                setEnteredPasscode('');
+                setPasscodeError('');
                 window.history.pushState({}, '', '/admin');
-                window.dispatchEvent(new Event('popstate'));
               }}
               className="admin-interactive" 
               style={{ 
