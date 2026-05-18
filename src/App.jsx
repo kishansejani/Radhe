@@ -1,10 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Phone, Mail, MapPin, Music, Zap, Flame, Star, Sparkles, Wind,
   PartyPopper, CheckCircle2, Users, HelpCircle, ArrowRight,
-  Image as ImageIcon, Send, Menu, X, Camera, Play, ChevronDown, ArrowUp
+  Image as ImageIcon, Send, Menu, X, Camera, Play, ChevronDown, ArrowUp,
+  Edit, Plus, Trash2, Save, Lock, Check, Upload, Download, Shield, Settings,
+  RotateCcw, Eye, LogOut
 } from 'lucide-react';
+import initialData from './data.json';
+
+// Dynamic Lucide Icon Mapper
+const IconMap = {
+  Phone, Mail, MapPin, Music, Zap, Flame, Star, Sparkles, Wind,
+  PartyPopper, CheckCircle2, Users, HelpCircle, ArrowRight,
+  ImageIcon, Send, Menu, X, Camera, Play, ChevronDown, ArrowUp,
+  Shield, Settings, Lock
+};
+
+const DynamicIcon = ({ name, size = 24, ...props }) => {
+  const IconComponent = IconMap[name] || HelpCircle;
+  return <IconComponent size={size} {...props} />;
+};
 
 const GlowingBlobs = () => {
   return (
@@ -45,19 +61,50 @@ const GlowingBlobs = () => {
   );
 };
 
-
 const hexToRgb = (hex) => {
+  if (!hex) return "6, 182, 212";
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : null;
+};
+
+const compressAndResizeImage = (file, maxWidth = 1200, quality = 0.75) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target.result;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Convert to high-performance JPEG Base64 string
+        const dataUrl = canvas.toDataURL('image/jpeg', quality);
+        resolve(dataUrl);
+      };
+      img.onerror = (err) => reject(err);
+    };
+    reader.onerror = (err) => reject(err);
+  });
 };
 
 const CustomCursor = () => {
   const [isPointer, setIsPointer] = useState(false);
   const [trail, setTrail] = useState([]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const handleMove = (e) => {
-      // Add a star to the trail
       const newStar = {
         id: Date.now() + Math.random(),
         x: e.clientX,
@@ -65,7 +112,6 @@ const CustomCursor = () => {
         size: Math.random() * 10 + 5,
         rotation: Math.random() * 360,
       };
-      
       setTrail(prev => [...prev.slice(-15), newStar]);
     };
     
@@ -77,7 +123,7 @@ const CustomCursor = () => {
     window.addEventListener('touchmove', (e) => handleMove(e.touches[0]));
     
     const updatePointers = () => {
-      document.querySelectorAll('a, button, .faq-item, .glass-card, .process-card').forEach(el => {
+      document.querySelectorAll('a, button, .faq-item, .glass-card, .process-card, .admin-interactive').forEach(el => {
         el.addEventListener('mouseenter', handlePointer);
         el.addEventListener('mouseleave', handleNormal);
       });
@@ -110,7 +156,7 @@ const CustomCursor = () => {
             width: star.size,
             height: star.size,
             pointerEvents: 'none',
-            zIndex: 9997,
+            zIndex: 99999,
             color: 'var(--primary-gold)',
           }}
         >
@@ -122,12 +168,36 @@ const CustomCursor = () => {
 };
 
 const App = () => {
+  // State for site data loaded dynamically
+  const [siteData, setSiteData] = useState(() => {
+    const cached = localStorage.getItem('radhe_site_data');
+    if (cached) {
+      try {
+        return JSON.parse(cached);
+      } catch (err) {
+        console.error("Error reading radhe_site_data from localStorage", err);
+      }
+    }
+    return initialData;
+  });
+
   const [formData, setFormData] = useState({ name: '', phone: '', event: '', message: '' });
   const [menuOpen, setMenuOpen] = useState(false);
   const [openFaqIndex, setOpenFaqIndex] = useState(0);
   const [showScrollTop, setShowScrollTop] = useState(false);
 
-  React.useEffect(() => {
+  // Admin Portal states
+  const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [isPasscodePromptOpen, setIsPasscodePromptOpen] = useState(false);
+  const [enteredPasscode, setEnteredPasscode] = useState('');
+  const [passcodeError, setPasscodeError] = useState('');
+  const [adminTab, setAdminTab] = useState('hero');
+  const [draftData, setDraftData] = useState(null);
+  const [saveStatus, setSaveStatus] = useState(null); // 'saving' | 'success' | 'error'
+  const [saveMsg, setSaveMsg] = useState('');
+
+  // Auto-scroll logic
+  useEffect(() => {
     const handleScroll = () => {
       setShowScrollTop(window.scrollY > 400);
     };
@@ -144,14 +214,111 @@ const App = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // Contact form → sends email to ckkardani1@gmail.com
   const handleFormSubmit = (e) => {
     e.preventDefault();
     const subject = encodeURIComponent(`Event Inquiry from ${formData.name}`);
     const body = encodeURIComponent(
       `Name: ${formData.name}\nPhone: ${formData.phone}\nEvent: ${formData.event}\nMessage: ${formData.message}`
     );
-    window.location.href = `mailto:ckkardani1@gmail.com?subject=${subject}&body=${body}`;
+    window.location.href = `mailto:${siteData.contact.email}?subject=${subject}&body=${body}`;
+  };
+
+  // Admin portal methods
+  const openPasscodePrompt = () => {
+    setIsPasscodePromptOpen(true);
+    setEnteredPasscode('');
+    setPasscodeError('');
+  };
+
+  const handlePasscodeSubmit = (e) => {
+    e.preventDefault();
+    const correctPass = siteData.adminSettings?.passcode || 'radhe123';
+    if (enteredPasscode === correctPass) {
+      setIsPasscodePromptOpen(false);
+      setIsAdminOpen(true);
+      setDraftData(JSON.parse(JSON.stringify(siteData))); // deep clone for safe drafting
+      setPasscodeError('');
+    } else {
+      setPasscodeError('Incorrect passcode! Please try again.');
+    }
+  };
+
+  const saveAdminChanges = async () => {
+    setSaveStatus('saving');
+    setSaveMsg('Saving content...');
+    
+    // 1. Save to LocalState
+    setSiteData(draftData);
+    
+    // 2. Save to Browser Storage
+    localStorage.setItem('radhe_site_data', JSON.stringify(draftData));
+
+    // 3. Save to local Vite dev server file directly
+    try {
+      const response = await fetch('/api/save-data', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(draftData, null, 2),
+      });
+
+      if (response.ok) {
+        setSaveStatus('success');
+        setSaveMsg('Changes saved directly to data.json & local storage successfully!');
+      } else {
+        setSaveStatus('success');
+        setSaveMsg('Saved locally in browser storage (Development Server bypassed).');
+      }
+    } catch (err) {
+      console.warn("Could not save to local dev server. Running static host mode. Saved in browser storage.", err);
+      setSaveStatus('success');
+      setSaveMsg('Saved in local browser storage. Use Download button to get your updated data.json!');
+    }
+
+    setTimeout(() => {
+      setSaveStatus(null);
+    }, 4000);
+  };
+
+  const resetToFactoryDefault = () => {
+    if (window.confirm("Are you sure you want to reset ALL data back to default settings? All custom edits will be deleted.")) {
+      setDraftData(JSON.parse(JSON.stringify(initialData)));
+      setSiteData(initialData);
+      localStorage.setItem('radhe_site_data', JSON.stringify(initialData));
+      alert("Successfully restored factory defaults!");
+    }
+  };
+
+  const downloadDataJson = () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(draftData, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", "data.json");
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
+
+  const handleJsonUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const parsed = JSON.parse(event.target.result);
+        if (parsed.hero && parsed.about && parsed.services) {
+          setDraftData(parsed);
+          alert("Backup data loaded into draft! Review the changes and click 'Save Changes' to apply.");
+        } else {
+          alert("Invalid data.json backup format!");
+        }
+      } catch (err) {
+        alert("Failed to parse JSON file! Make sure it is valid.");
+      }
+    };
+    reader.readAsText(file);
   };
 
   const navLinks = [
@@ -161,41 +328,6 @@ const App = () => {
     { href: '#gallery', label: 'Gallery' },
     { href: '#contact', label: 'Contact' },
   ];
-
-  const services = [
-    { title: 'Exclusive DJ', icon: <Music size={36} />, desc: 'High-end sound systems and professional mixing for all events.', color: '#06b6d4' },
-    { title: 'Cold Pyro Fire', icon: <Flame size={36} />, desc: 'Breathtaking cold spark fountains for grand entrances.', color: '#a855f7' },
-    { title: 'Hand Cold Pyro', icon: <Flame size={36} />, desc: 'Safe and spectacular hand-held pyro effects.', color: '#10b981' },
-    { title: 'Paper Blast', icon: <PartyPopper size={36} />, desc: 'Colorful confetti blasts to celebrate your special moments.', color: '#f43f5e' },
-    { title: 'Ribbon Blast', icon: <Star size={36} />, desc: 'Elegant ribbon displays for a festive atmosphere.', color: '#0ea5e9' },
-    { title: 'Balloon Blast Entry', icon: <Sparkles size={36} />, desc: 'Grand balloon explosions for dramatic entries.', color: '#fbbf24' },
-    { title: 'Matka Smoke', icon: <Wind size={36} />, desc: 'Low-lying fog effects for a dreamy stage presence.', color: '#3b82f6' },
-    { title: 'Pro Lighting', icon: <Zap size={36} />, desc: 'Intelligent stage lighting and ambient decor lights.', color: '#ec4899' },
-    { title: 'Experience Crew', icon: <Users size={36} />, desc: 'Dedicated team to manage every detail of your event.', color: '#14b8a6' },
-  ];
-
-  const packages = [
-    {
-      name: 'Silver Package', level: 'Essential',
-      features: ['Professional DJ', 'Standard Sound System', 'Basic Lighting', '2 Cold Pyro Fountains', '4 Hours Service'],
-    },
-    {
-      name: 'Gold Package', level: 'Most Popular',
-      features: ['Professional DJ & MC', 'Premium Sound System', 'Moving Head Lights', '4 Cold Pyro Fountains', 'Paper Blast', '6 Hours Service'],
-      featured: true,
-    },
-    {
-      name: 'Diamond Package', level: 'Grand Celebration',
-      features: ['Master DJ Team', 'Line Array Sound System', 'Full Stage Lighting', 'Hand Pyro & Matka Smoke', 'Ribbon Blast', 'Unlimited Service'],
-    },
-  ];
-
-  const faqs = [
-    { q: 'How early should we book?', a: 'We recommend booking at least 2–3 months before your event to guarantee availability.' },
-    { q: 'Do you travel for events?', a: 'Yes! Radhe DJ & Event provides services across all major cities in Gujarat.' },
-    { q: 'Can we customize the lighting?', a: 'Absolutely — we can match lighting colors and effects to your exact wedding theme.' },
-  ];
-
 
   return (
     <div className="min-h-screen">
@@ -219,7 +351,7 @@ const App = () => {
         </div>
 
         {/* Desktop CTA */}
-        <a href="tel:9624047940" className="btn-royal nav-cta">
+        <a href={`tel:${siteData.contact.chintanPhoneRaw}`} className="btn-royal nav-cta">
           <Phone size={16} /> Book Now
         </a>
 
@@ -248,7 +380,7 @@ const App = () => {
                 {l.label}
               </a>
             ))}
-            <a href="tel:9624047940" className="btn-royal" style={{ justifyContent: 'center', marginTop: '1rem' }}>
+            <a href={`tel:${siteData.contact.chintanPhoneRaw}`} className="btn-royal" style={{ justifyContent: 'center', marginTop: '1rem' }}>
               <Phone size={16} /> Call Now
             </a>
           </motion.div>
@@ -264,7 +396,7 @@ const App = () => {
             initial={{ scale: 1.15, filter: 'blur(12px)' }}
             animate={{ scale: 1, filter: 'blur(0px)' }}
             transition={{ duration: 1.6, ease: 'easeOut' }}
-            src="https://images.unsplash.com/photo-1571266028243-e4733b0f0bb1?auto=format&fit=crop&q=80&w=2000"
+            src={siteData.hero.bgImage}
             alt="DJ Event"
             style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.28 }}
           />
@@ -278,7 +410,7 @@ const App = () => {
             transition={{ delay: 0.1 }}
             className="badge"
           >
-            ✦ The Ultimate Party Experience ✦
+            {siteData.hero.badge}
           </motion.div>
 
           <motion.h2
@@ -287,7 +419,7 @@ const App = () => {
             transition={{ delay: 0.25, type: 'spring', stiffness: 90 }}
             className="playfair hero-title"
           >
-            RADHE <span className="purple-gradient">DJ</span>
+            {siteData.hero.title} <span className="purple-gradient">{siteData.hero.titleGradient}</span>
           </motion.h2>
 
           <motion.p
@@ -295,9 +427,8 @@ const App = () => {
             animate={{ opacity: 1 }}
             transition={{ delay: 0.45 }}
             className="hero-sub"
-          >
-            ✦ &nbsp; Professional Event Management &nbsp; ✦
-          </motion.p>
+            dangerouslySetInnerHTML={{ __html: siteData.hero.subtitle }}
+          />
 
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -305,11 +436,11 @@ const App = () => {
             transition={{ delay: 0.65 }}
             className="hero-btns"
           >
-            <a href="#services" className="btn-royal">
-              Explore Our World <ArrowRight size={18} />
+            <a href={siteData.hero.btnExploreLink} className="btn-royal">
+              {siteData.hero.btnExploreText} <ArrowRight size={18} />
             </a>
-            <a href="#contact" className="btn-glass">
-              Request Quote
+            <a href={siteData.hero.btnQuoteLink} className="btn-glass">
+              {siteData.hero.btnQuoteText}
             </a>
           </motion.div>
         </div>
@@ -323,30 +454,28 @@ const App = () => {
           <div className="about-img-wrap">
             <div className="about-img-frame">
               <img
-                src="/truck.png"
+                src={siteData.about.image}
                 alt="Radhe DJ Truck"
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 onError={(e) => { e.target.onerror = null; e.target.src = 'https://picsum.photos/seed/djevent/1200/800'; }}
               />
             </div>
             <div className="about-badge-float glass-card">
-              <h4 className="royal-gradient" style={{ fontSize: '2.6rem', fontWeight: '900', lineHeight: 1 }}>10+</h4>
-              <p style={{ fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '3px', marginTop: '8px' }}>Years Experience</p>
+              <h4 className="royal-gradient" style={{ fontSize: '2.6rem', fontWeight: '900', lineHeight: 1 }}>{siteData.about.experienceYears}</h4>
+              <p style={{ fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '3px', marginTop: '8px' }}>{siteData.about.experienceLabel}</p>
             </div>
           </div>
 
           <div>
-            <div className="badge">About Us</div>
+            <div className="badge">{siteData.about.badge}</div>
             <h2 style={{ fontSize: 'clamp(2rem, 5vw, 3.2rem)', marginBottom: '1.5rem', lineHeight: 1.1 }}>
-              Experience the Best <span className="royal-gradient">Sound &amp; Lights</span>
+              {siteData.about.title} <span className="royal-gradient">{siteData.about.titleGradient}</span>
             </h2>
             <p style={{ color: '#94a3b8', fontSize: '1.05rem', marginBottom: '2rem', lineHeight: 2 }}>
-              Radhe DJ &amp; Event is the most trusted name in Keshod for professional event entertainment.
-              Our team creates unforgettable atmospheres using international-grade sound systems and safe,
-              high-impact special effects.
+              {siteData.about.description}
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {['High-Quality Audio Engineering', 'Safe Indoor/Outdoor Pyro Shows', 'Professional Stage Management'].map((item, i) => (
+              {siteData.about.keyPoints.map((item, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '14px 20px', background: 'rgba(139,92,246,0.05)', border: '1px solid rgba(139,92,246,0.12)', borderRadius: '12px' }}>
                   <CheckCircle2 size={18} style={{ color: '#fbbf24', flexShrink: 0 }} />
                   <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>{item}</span>
@@ -360,12 +489,7 @@ const App = () => {
       {/* ─────────────── STATS ─────────────── */}
       <section className="section-padding" style={{ background: 'var(--alt-bg)', paddingTop: 0 }}>
         <div className="stats-grid">
-          {[
-            { label: 'Successful Events', value: '500+', icon: <PartyPopper size={32} /> },
-            { label: 'Years Experience', value: '10+', icon: <Users size={32} /> },
-            { label: 'Happy Clients', value: '100%', icon: <Star size={32} /> },
-            { label: 'Expert Staff', value: '10+', icon: <CheckCircle2 size={32} /> },
-          ].map((stat, i) => (
+          {siteData.stats.map((stat, i) => (
             <motion.div
               key={i}
               initial={{ opacity: 0, y: 30 }}
@@ -374,7 +498,9 @@ const App = () => {
               transition={{ delay: i * 0.15 }}
               className="glass-card stat-card"
             >
-              <div className="stat-icon">{stat.icon}</div>
+              <div className="stat-icon">
+                <DynamicIcon name={stat.iconName} size={32} />
+              </div>
               <h3 className="royal-gradient" style={{ fontSize: '2.5rem', fontWeight: 900, marginBottom: '0.5rem' }}>{stat.value}</h3>
               <p style={{ color: '#94a3b8', fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '2px' }}>{stat.label}</p>
             </motion.div>
@@ -394,7 +520,7 @@ const App = () => {
         </div>
 
         <div className="process-grid">
-          {services.map((s, i) => (
+          {siteData.services.map((s, i) => (
             <motion.div
               key={i}
               initial={{ opacity: 0, y: 30 }}
@@ -410,7 +536,7 @@ const App = () => {
               <div className="process-number-badge">{i + 1}</div>
               <div className="process-bg-number">{String(i + 1).padStart(2, '0')}</div>
               <div className="process-icon-box" style={{ position: 'relative', zIndex: 2 }}>
-                {s.icon}
+                <DynamicIcon name={s.iconName} size={36} />
               </div>
               <h3 className="process-title" style={{ position: 'relative', zIndex: 2 }}>{s.title}</h3>
               <p className="process-desc">{s.desc}</p>
@@ -418,8 +544,6 @@ const App = () => {
           ))}
         </div>
       </section>
-
-
 
       {/* ─────────────── GALLERY ─────────────── */}
       <section id="gallery" className="section-padding">
@@ -430,14 +554,7 @@ const App = () => {
           </h2>
         </div>
         <div className="gallery-grid">
-          {[
-            { url: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=800&q=80', seed: 'djtruck', },
-            { url: 'https://5.imimg.com/data5/SELLER/Default/2023/3/294551927/PD/MX/NC/24504299/iron-front-truss.jpg', seed: 'pyrofire', },
-            { url: 'https://5.imimg.com/data5/PR/OS/IK/SELLER-82523699/aluminium-lighting-truss.jpg', seed: 'partyvibe', },
-            { url: 'https://static.wixstatic.com/media/b1f310_498859c2e0904a238c896d55ed467632~mv2.jpeg/v1/fill/w_600,h_600,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/b1f310_498859c2e0904a238c896d55ed467632~mv2.jpeg', seed: 'djbooth', },
-            { url: 'https://5.imimg.com/data5/ANDROID/Default/2024/1/378120873/RF/TM/KT/163873875/product-jpeg-500x500.jpg', seed: 'stagelights', },
-            { url: 'https://floriwish.in/wp-content/uploads/2025/05/rose-petal-blast-service.jpg', seed: 'celebrate', },
-          ].map((img, i) => (
+          {siteData.gallery.map((img, i) => (
             <div key={i} className="gallery-card">
               <img
                 src={img.url}
@@ -465,7 +582,7 @@ const App = () => {
         </div>
 
         <div className="packages-grid">
-          {packages.map((pkg, i) => (
+          {siteData.packages.map((pkg, i) => (
             <div key={i} className={`glass-card package-card ${pkg.featured ? 'featured' : ''}`} style={{ display: 'flex', flexDirection: 'column' }}>
               {pkg.featured && (
                 <span style={{ background: 'linear-gradient(135deg,#fbbf24,#d97706)', color: '#000', fontSize: '0.62rem', fontWeight: 900, letterSpacing: '3px', textTransform: 'uppercase', padding: '5px 14px', borderRadius: '100px', display: 'inline-block', marginBottom: '1.2rem', alignSelf: 'flex-start' }}>
@@ -482,9 +599,8 @@ const App = () => {
                   </div>
                 ))}
               </div>
-              {/* Direct call to Chintan Patel */}
               <a
-                href="tel:9624047940"
+                href={`tel:${siteData.contact.chintanPhoneRaw}`}
                 className="btn-royal"
                 style={{ justifyContent: 'center', fontSize: '0.78rem', padding: '14px 16px' }}
               >
@@ -505,18 +621,14 @@ const App = () => {
         </div>
 
         <div className="testimonials-grid">
-          {[
-            { name: 'Ramesh Patel', role: 'Wedding Client', text: 'Radhe DJ made our wedding magical! The sound quality was top-notch and the pyro effects were breathtaking.' },
-            { name: 'Raj Bhalodiya', role: 'Birthday Party', text: 'Unbelievable energy! They kept the crowd dancing for 6 hours straight. Highly recommended for any event.' },
-            { name: 'Harsh Ramani', role: 'Corporate Event', text: 'Professional crew and amazing lighting. They handled everything perfectly from start to finish.' },
-          ].map((t, i) => (
+          {siteData.testimonials.map((t, i) => (
             <motion.div
               key={i}
               whileHover={{ y: -10 }}
               className="glass-card testimonial-card"
             >
               <div style={{ display: 'flex', gap: '4px', marginBottom: '1.2rem' }}>
-                {[...Array(5)].map((_, i) => <Star key={i} size={16} fill="#fbbf24" color="#fbbf24" />)}
+                {[...Array(5)].map((_, idx) => <Star key={idx} size={16} fill="#fbbf24" color="#fbbf24" />)}
               </div>
               <p style={{ fontStyle: 'italic', color: '#cbd5e1', marginBottom: '2rem', lineHeight: 1.8 }}>"{t.text}"</p>
               <div>
@@ -538,7 +650,7 @@ const App = () => {
             </h2>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
-            {faqs.map((faq, i) => {
+            {siteData.faqs.map((faq, i) => {
               const isOpen = openFaqIndex === i;
               return (
                 <div
@@ -604,45 +716,45 @@ const App = () => {
                 </div>
                 <div>
                   <h4 style={{ fontWeight: 800, marginBottom: '4px', fontSize: '1rem' }}>Visit Us</h4>
-                  <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>60 feet, D.P. road, Veraval road – Keshod</p>
+                  <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>{siteData.contact.address}</p>
                 </div>
               </div>
 
               {/* Chintan */}
-              <a href="tel:9624047940" style={{ textDecoration: 'none', color: 'inherit' }}>
+              <a href={`tel:${siteData.contact.chintanPhoneRaw}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                 <div className="contact-info-item">
                   <div className="contact-icon" style={{ background: 'rgba(251,191,36,0.1)', color: '#fbbf24' }}>
                     <Phone size={24} />
                   </div>
                   <div>
                     <h4 style={{ fontWeight: 800, marginBottom: '4px', fontSize: '1rem' }}>Chintan Patel</h4>
-                    <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>+91 96240 47940 &nbsp;<span style={{ color: '#fbbf24', fontSize: '0.78rem' }}></span></p>
+                    <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>{siteData.contact.chintanPhone}</p>
                   </div>
                 </div>
               </a>
 
               {/* Mehul */}
-              <a href="tel:9909505194" style={{ textDecoration: 'none', color: 'inherit' }}>
+              <a href={`tel:${siteData.contact.mehulPhoneRaw}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                 <div className="contact-info-item">
                   <div className="contact-icon" style={{ background: 'rgba(251,191,36,0.1)', color: '#fbbf24' }}>
                     <Phone size={24} />
                   </div>
                   <div>
                     <h4 style={{ fontWeight: 800, marginBottom: '4px', fontSize: '1rem' }}>Mehul Patel</h4>
-                    <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>+91 99095 05194</p>
+                    <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>{siteData.contact.mehulPhone}</p>
                   </div>
                 </div>
               </a>
 
               {/* Email */}
-              <a href="mailto:ckkardani1@gmail.com" style={{ textDecoration: 'none', color: 'inherit' }}>
+              <a href={`mailto:${siteData.contact.email}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                 <div className="contact-info-item">
                   <div className="contact-icon" style={{ background: 'rgba(139,92,246,0.1)', color: '#a78bfa' }}>
                     <Mail size={24} />
                   </div>
                   <div>
                     <h4 style={{ fontWeight: 800, marginBottom: '4px', fontSize: '1rem' }}>Email Us</h4>
-                    <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>ckkardani1@gmail.com</p>
+                    <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>{siteData.contact.email}</p>
                   </div>
                 </div>
               </a>
@@ -668,7 +780,6 @@ const App = () => {
       {/* ─────────────── FOOTER ─────────────── */}
       <footer>
         <div className="footer-inner">
-
           {/* Brand */}
           <div className="footer-brand">
             <div style={{ width: '140px', height: '55px', marginBottom: '1.2rem' }}>
@@ -685,13 +796,13 @@ const App = () => {
             </p>
             {/* Social icons */}
             <div style={{ display: 'flex', gap: '14px', marginTop: '1.5rem' }}>
-              <a href="https://www.instagram.com/radhe_dj_official?igsh=MXhndmw4MjAxcG9iNA==" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="social-icon">
+              <a href={siteData.contact.instagram} target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="social-icon">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
               </a>
-              <a href="https://youtu.be/8VJOp63Ac6o?si=vFoGOL-w6rRi65iH" target="_blank" rel="noopener noreferrer" aria-label="YouTube" className="social-icon">
+              <a href={siteData.contact.youtube} target="_blank" rel="noopener noreferrer" aria-label="YouTube" className="social-icon">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.42a2.78 2.78 0 0 0-1.94 2C1 8.11 1 12 1 12s0 3.89.46 5.58a2.78 2.78 0 0 0 1.94 2c1.72.42 8.6.42 8.6.42s6.88 0 8.6-.42a2.78 2.78 0 0 0 1.94-2C23 15.89 23 12 23 12s0-3.89-.46-5.58z"></path><polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02"></polygon></svg>
               </a>
-              <a href="https://wa.me/919624047940" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp" className="social-icon">
+              <a href={siteData.contact.whatsapp} target="_blank" rel="noopener noreferrer" aria-label="WhatsApp" className="social-icon">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" /></svg>
               </a>
             </div>
@@ -713,8 +824,8 @@ const App = () => {
           <div>
             <h5 className="footer-heading">Services</h5>
             <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {['Exclusive DJ', 'Cold Pyro Fire', 'Paper Blast', 'Ribbon Blast', 'Pro Lighting', 'Matka Smoke'].map(s => (
-                <li key={s}><a href="#services" className="footer-link">{s}</a></li>
+              {siteData.services.slice(0, 6).map(s => (
+                <li key={s.title}><a href="#services" className="footer-link">{s.title}</a></li>
               ))}
             </ul>
           </div>
@@ -723,29 +834,39 @@ const App = () => {
           <div>
             <h5 className="footer-heading">Contact</h5>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <a href="tel:9624047940" className="footer-contact-row">
+              <a href={`tel:${siteData.contact.chintanPhoneRaw}`} className="footer-contact-row">
                 <Phone size={16} style={{ color: '#fbbf24', flexShrink: 0 }} />
-                <span>+91 96240 47940</span>
+                <span>{siteData.contact.chintanPhone}</span>
               </a>
-              <a href="tel:9909505194" className="footer-contact-row">
+              <a href={`tel:${siteData.contact.mehulPhoneRaw}`} className="footer-contact-row">
                 <Phone size={16} style={{ color: '#fbbf24', flexShrink: 0 }} />
-                <span>+91 99095 05194</span>
+                <span>{siteData.contact.mehulPhone}</span>
               </a>
-              <a href="mailto:ckkardani1@gmail.com" className="footer-contact-row">
+              <a href={`mailto:${siteData.contact.email}`} className="footer-contact-row">
                 <Mail size={16} style={{ color: '#fbbf24', flexShrink: 0 }} />
-                <span>ckkardani1@gmail.com</span>
+                <span>{siteData.contact.email}</span>
               </a>
               <div className="footer-contact-row" style={{ cursor: 'default' }}>
                 <MapPin size={16} style={{ color: '#fbbf24', flexShrink: 0 }} />
-                <span>Keshod, Gujarat</span>
+                <span>{siteData.contact.address}</span>
               </div>
             </div>
           </div>
         </div>
 
         {/* Bottom bar */}
-        <div className="footer-bottom">
+        <div className="footer-bottom" style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '15px' }}>
           <p>© 2026 Radhe DJ &amp; Event. All Rights Reserved.</p>
+          
+          {/* Admin Login portal entry */}
+          <p 
+            onClick={openPasscodePrompt} 
+            className="admin-interactive"
+            style={{ color: 'rgba(255,255,255,0.15)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600, fontSize: '0.85rem' }}
+          >
+            <Lock size={12} /> Admin Portal
+          </p>
+
           <p style={{ color: '#a78bfa', fontWeight: 600 }}>Premium Service for Premium People</p>
         </div>
       </footer>
@@ -768,7 +889,7 @@ const App = () => {
         </AnimatePresence>
 
         <a
-          href="https://wa.me/919624047940"
+          href={siteData.contact.whatsapp}
           target="_blank"
           rel="noopener noreferrer"
           className="float-btn float-whatsapp"
@@ -777,6 +898,978 @@ const App = () => {
           <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" /></svg>
         </a>
       </div>
+
+      {/* ─────────────── PASSCODE PROMPT MODAL ─────────────── */}
+      <AnimatePresence>
+        {isPasscodePromptOpen && (
+          <motion.div 
+            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(2, 6, 23, 0.9)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', zIndex: 999999 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div 
+              className="glass-card admin-interactive"
+              style={{ width: '420px', padding: '40px', background: 'rgba(13, 21, 48, 0.95)', border: '1px solid rgba(251, 191, 36, 0.3)', boxShadow: '0 15px 45px rgba(0, 0, 0, 0.6), 0 0 30px rgba(251, 191, 36, 0.1)' }}
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            >
+              <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+                <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'rgba(251, 191, 36, 0.1)', color: '#fbbf24', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem', border: '1px solid rgba(251, 191, 36, 0.3)' }}>
+                  <Shield size={28} />
+                </div>
+                <h3 className="playfair royal-gradient" style={{ fontSize: '1.8rem', fontWeight: 900, marginBottom: '6px' }}>Admin Login</h3>
+                <p style={{ color: '#94a3b8', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '2px' }}>Radhe DJ Event Portal</p>
+              </div>
+
+              <form onSubmit={handlePasscodeSubmit} style={{ display: 'flex', flexDirection: 'column' }}>
+                <input 
+                  type="password" 
+                  placeholder="Enter Admin Passcode" 
+                  value={enteredPasscode}
+                  onChange={(e) => setEnteredPasscode(e.target.value)}
+                  style={{ width: '100%', background: 'rgba(2, 6, 23, 0.5)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '14px 20px', color: '#fff', fontSize: '1rem', textAlign: 'center', marginBottom: '1.2rem', outline: 'none' }}
+                  required
+                  autoFocus
+                />
+                
+                {passcodeError && (
+                  <p style={{ color: '#f43f5e', fontSize: '0.85rem', fontWeight: 600, textAlign: 'center', marginBottom: '1.2rem' }}>{passcodeError}</p>
+                )}
+
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <button 
+                    type="button" 
+                    className="btn-glass" 
+                    style={{ flex: 1, padding: '12px', fontSize: '0.8rem' }}
+                    onClick={() => setIsPasscodePromptOpen(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit" 
+                    className="btn-royal" 
+                    style={{ flex: 1.5, padding: '12px', fontSize: '0.8rem' }}
+                  >
+                    Access Portal
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ─────────────── DYNAMIC ADMIN PANEL DASHBOARD ─────────────── */}
+      <AnimatePresence>
+        {isAdminOpen && draftData && (
+          <motion.div 
+            className="admin-dashboard-root"
+            style={{
+              position: 'fixed', inset: 0, zIndex: 99999, background: '#020617', color: '#f8fafc',
+              fontFamily: "'Outfit', sans-serif", display: 'flex', overflow: 'hidden'
+            }}
+            initial={{ opacity: 0, scale: 1.05 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 1.05 }}
+            transition={{ duration: 0.4 }}
+          >
+            {/* Sidebar Navigation */}
+            <div style={{ width: '280px', background: '#070b1d', borderRight: '1px solid rgba(139, 92, 246, 0.15)', display: 'flex', flexDirection: 'column', flexShrink: 0, padding: '24px 0' }}>
+              <div style={{ padding: '0 24px 24px', borderBottom: '1px solid rgba(255, 255, 255, 0.05)', marginBottom: '20px' }}>
+                <h2 className="playfair" style={{ fontSize: '1.5rem', fontWeight: 900, letterSpacing: '1px' }}>
+                  RADHE <span className="purple-gradient">DJ</span>
+                </h2>
+                <div style={{ background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.2)', padding: '5px 12px', borderRadius: '100px', display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.62rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '1.5px', color: '#fbbf24', marginTop: '10px' }}>
+                  <Shield size={10} /> Admin Dashboard
+                </div>
+              </div>
+
+              {/* Sidebar Menu Items */}
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px', padding: '0 12px' }}>
+                {[
+                  { id: 'hero', label: 'Hero Section', icon: 'Zap' },
+                  { id: 'about', label: 'About & Stats', icon: 'Users' },
+                  { id: 'services', label: 'Specialties', icon: 'Flame' },
+                  { id: 'gallery', label: 'Gallery Grid', icon: 'ImageIcon' },
+                  { id: 'packages', label: 'Pricing Packages', icon: 'Star' },
+                  { id: 'testimonials', label: 'Testimonials', icon: 'Sparkles' },
+                  { id: 'faqs', label: 'FAQs List', icon: 'HelpCircle' },
+                  { id: 'contact', label: 'Contact Details', icon: 'Phone' },
+                  { id: 'settings', label: 'System & Security', icon: 'Settings' }
+                ].map(item => {
+                  const isActive = adminTab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => setAdminTab(item.id)}
+                      className="admin-interactive"
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '14px', width: '100%',
+                        padding: '12px 18px', border: 'none', borderRadius: '12px', fontSize: '0.88rem', fontWeight: 600,
+                        textAlign: 'left', cursor: 'pointer', transition: 'all 0.3s',
+                        background: isActive ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(6, 182, 212, 0.1))' : 'transparent',
+                        color: isActive ? '#fff' : '#94a3b8',
+                        borderLeft: isActive ? '3px solid #fbbf24' : '3px solid transparent',
+                        boxShadow: isActive ? '0 4px 15px rgba(139, 92, 246, 0.05)' : 'none'
+                      }}
+                    >
+                      <DynamicIcon name={item.icon} size={18} style={{ color: isActive ? '#fbbf24' : '#64748b' }} />
+                      {item.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Sidebar bottom */}
+              <div style={{ padding: '20px 16px 0', borderTop: '1px solid rgba(255, 255, 255, 0.05)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <button
+                  onClick={resetToFactoryDefault}
+                  className="btn-glass admin-interactive"
+                  style={{ width: '100%', padding: '10px', fontSize: '0.72rem', background: 'rgba(244, 63, 94, 0.05)', borderColor: 'rgba(244, 63, 94, 0.2)', color: '#f43f5e', justifyContent: 'center' }}
+                >
+                  <RotateCcw size={13} /> Factory Reset Data
+                </button>
+                <button
+                  onClick={() => setIsAdminOpen(false)}
+                  className="btn-glass admin-interactive"
+                  style={{ width: '100%', padding: '10px', fontSize: '0.72rem', justifyContent: 'center', borderColor: 'rgba(255,255,255,0.15)' }}
+                >
+                  <LogOut size={13} /> Exit Portal
+                </button>
+              </div>
+            </div>
+
+            {/* Dashboard Workspace */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#020617', overflow: 'hidden' }}>
+              {/* Workspace Topbar */}
+              <div style={{ height: '80px', borderBottom: '1px solid rgba(139, 92, 246, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 40px', flexShrink: 0 }}>
+                <div>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 800 }}>
+                    Editing: <span style={{ color: '#fbbf24' }}>{adminTab.toUpperCase()}</span>
+                  </h3>
+                  <p style={{ color: '#64748b', fontSize: '0.76rem' }}>Live Preview will sync once you click Save Changes</p>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <button
+                    onClick={downloadDataJson}
+                    className="btn-glass admin-interactive"
+                    style={{ padding: '10px 16px', fontSize: '0.76rem', gap: '8px' }}
+                    title="Download raw data.json file for manually deploying changes"
+                  >
+                    <Download size={14} /> Export Backup
+                  </button>
+                  <label
+                    className="btn-glass admin-interactive"
+                    style={{ padding: '10px 16px', fontSize: '0.76rem', gap: '8px', cursor: 'pointer' }}
+                  >
+                    <Upload size={14} /> Import Backup
+                    <input type="file" accept=".json" onChange={handleJsonUpload} style={{ display: 'none' }} />
+                  </label>
+                  <button
+                    onClick={saveAdminChanges}
+                    className="btn-royal admin-interactive"
+                    style={{ padding: '10px 24px', fontSize: '0.76rem', gap: '8px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 8px 30px rgba(16, 185, 129, 0.2)' }}
+                  >
+                    <Save size={14} /> Save Changes
+                  </button>
+                </div>
+              </div>
+
+              {/* Workspace Scroll Area Form Fields */}
+              <div style={{ flex: 1, padding: '40px', overflowY: 'auto' }}>
+                
+                {/* Save Toast Notification Inside Admin Panel */}
+                <AnimatePresence>
+                  {saveStatus && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      style={{
+                        padding: '16px 24px', borderRadius: '12px', marginBottom: '24px',
+                        background: saveStatus === 'saving' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+                        border: saveStatus === 'saving' ? '1px solid rgba(59, 130, 246, 0.3)' : '1px solid rgba(16, 185, 129, 0.3)',
+                        color: saveStatus === 'saving' ? '#60a5fa' : '#34d399',
+                        display: 'flex', alignItems: 'center', gap: '12px', fontWeight: 600, fontSize: '0.9rem'
+                      }}
+                    >
+                      {saveStatus === 'saving' ? <Settings className="animate-spin" size={18} /> : <Check size={18} />}
+                      {saveMsg}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* TAB 1: HERO */}
+                {adminTab === 'hero' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '800px' }}>
+                    <div className="glass-card" style={{ padding: '30px' }}>
+                      <h4 style={{ color: '#fbbf24', fontSize: '1rem', fontWeight: 800, marginBottom: '20px' }}>Hero Details</h4>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                        <div>
+                          <label style={{ fontSize: '0.78rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', display: 'block', marginBottom: '8px' }}>Hero Badge Text</label>
+                          <input type="text" value={draftData.hero.badge} onChange={e => setDraftData(prev => ({ ...prev, hero: { ...prev.hero, badge: e.target.value } }))} style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '12px', color: '#fff' }} />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '0.78rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', display: 'block', marginBottom: '8px' }}>Main Title Base</label>
+                          <input type="text" value={draftData.hero.title} onChange={e => setDraftData(prev => ({ ...prev, hero: { ...prev.hero, title: e.target.value } }))} style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '12px', color: '#fff' }} />
+                        </div>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                        <div>
+                          <label style={{ fontSize: '0.78rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', display: 'block', marginBottom: '8px' }}>Title Gradient highlight</label>
+                          <input type="text" value={draftData.hero.titleGradient} onChange={e => setDraftData(prev => ({ ...prev, hero: { ...prev.hero, titleGradient: e.target.value } }))} style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '12px', color: '#fff' }} />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '0.78rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', display: 'block', marginBottom: '8px' }}>Subtitle</label>
+                          <input type="text" value={draftData.hero.subtitle} onChange={e => setDraftData(prev => ({ ...prev, hero: { ...prev.hero, subtitle: e.target.value } }))} style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '12px', color: '#fff' }} />
+                        </div>
+                      </div>
+                      <div style={{ marginBottom: '20px' }}>
+                        <label style={{ fontSize: '0.78rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', display: 'block', marginBottom: '8px' }}>Hero Background Image URL</label>
+                        <div style={{ display: 'flex', gap: '10px', marginBottom: '8px' }}>
+                          <input type="text" value={draftData.hero.bgImage} onChange={e => setDraftData(prev => ({ ...prev, hero: { ...prev.hero, bgImage: e.target.value } }))} style={{ flex: 1, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '12px', color: '#fff' }} />
+                          <label className="btn-glass admin-interactive" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '0 20px', borderRadius: '8px', border: '1px solid rgba(251, 191, 36, 0.4)', background: 'rgba(251, 191, 36, 0.08)', color: '#fbbf24', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>
+                            <Upload size={14} /> Choose Image
+                            <input 
+                              type="file" 
+                              accept="image/*" 
+                              onChange={async (e) => {
+                                const file = e.target.files[0];
+                                if (file) {
+                                  try {
+                                    const base64 = await compressAndResizeImage(file);
+                                    setDraftData(prev => ({ ...prev, hero: { ...prev.hero, bgImage: base64 } }));
+                                  } catch (err) {
+                                    alert('Error loading image. Please try another file.');
+                                  }
+                                }
+                              }} 
+                              style={{ display: 'none' }} 
+                            />
+                          </label>
+                        </div>
+                        <div style={{ width: '100%', height: '140px', overflow: 'hidden', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                          <img src={draftData.hero.bgImage} alt="Background Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1571266028243-e4733b0f0bb1?w=800'; }} />
+                        </div>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                        <div>
+                          <label style={{ fontSize: '0.78rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', display: 'block', marginBottom: '8px' }}>Explore Button Text</label>
+                          <input type="text" value={draftData.hero.btnExploreText} onChange={e => setDraftData(prev => ({ ...prev, hero: { ...prev.hero, btnExploreText: e.target.value } }))} style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '12px', color: '#fff' }} />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '0.78rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', display: 'block', marginBottom: '8px' }}>Quote Button Text</label>
+                          <input type="text" value={draftData.hero.btnQuoteText} onChange={e => setDraftData(prev => ({ ...prev, hero: { ...prev.hero, btnQuoteText: e.target.value } }))} style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '12px', color: '#fff' }} />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB 2: ABOUT & STATS */}
+                {adminTab === 'about' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '30px', maxWidth: '800px' }}>
+                    <div className="glass-card" style={{ padding: '30px' }}>
+                      <h4 style={{ color: '#fbbf24', fontSize: '1rem', fontWeight: 800, marginBottom: '20px' }}>About Section Information</h4>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                        <div>
+                          <label style={{ fontSize: '0.78rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', display: 'block', marginBottom: '8px' }}>About Badge</label>
+                          <input type="text" value={draftData.about.badge} onChange={e => setDraftData(prev => ({ ...prev, about: { ...prev.about, badge: e.target.value } }))} style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '12px', color: '#fff' }} />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '0.78rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', display: 'block', marginBottom: '8px' }}>Base Title</label>
+                          <input type="text" value={draftData.about.title} onChange={e => setDraftData(prev => ({ ...prev, about: { ...prev.about, title: e.target.value } }))} style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '12px', color: '#fff' }} />
+                        </div>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                        <div>
+                          <label style={{ fontSize: '0.78rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', display: 'block', marginBottom: '8px' }}>Title Gradient Accent</label>
+                          <input type="text" value={draftData.about.titleGradient} onChange={e => setDraftData(prev => ({ ...prev, about: { ...prev.about, titleGradient: e.target.value } }))} style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '12px', color: '#fff' }} />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '0.78rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', display: 'block', marginBottom: '8px' }}>About Image path/URL</label>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <input type="text" value={draftData.about.image} onChange={e => setDraftData(prev => ({ ...prev, about: { ...prev.about, image: e.target.value } }))} style={{ flex: 1, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '12px', color: '#fff', minWidth: 0 }} />
+                            <label className="btn-glass admin-interactive" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '0 12px', borderRadius: '8px', border: '1px solid rgba(251, 191, 36, 0.4)', background: 'rgba(251, 191, 36, 0.08)', color: '#fbbf24', fontSize: '0.7rem', fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>
+                              <Upload size={12} /> Choose
+                              <input 
+                                type="file" 
+                                accept="image/*" 
+                                onChange={async (e) => {
+                                  const file = e.target.files[0];
+                                  if (file) {
+                                    try {
+                                      const base64 = await compressAndResizeImage(file);
+                                      setDraftData(prev => ({ ...prev, about: { ...prev.about, image: base64 } }));
+                                    } catch (err) {
+                                      alert('Error loading image. Please try another file.');
+                                    }
+                                  }
+                                }} 
+                                style={{ display: 'none' }} 
+                              />
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                        <div>
+                          <label style={{ fontSize: '0.78rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', display: 'block', marginBottom: '8px' }}>Experience Float Value (e.g. 10+)</label>
+                          <input type="text" value={draftData.about.experienceYears} onChange={e => setDraftData(prev => ({ ...prev, about: { ...prev.about, experienceYears: e.target.value } }))} style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '12px', color: '#fff' }} />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '0.78rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', display: 'block', marginBottom: '8px' }}>Experience Float Label</label>
+                          <input type="text" value={draftData.about.experienceLabel} onChange={e => setDraftData(prev => ({ ...prev, about: { ...prev.about, experienceLabel: e.target.value } }))} style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '12px', color: '#fff' }} />
+                        </div>
+                      </div>
+                      <div style={{ marginBottom: '20px' }}>
+                        <label style={{ fontSize: '0.78rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', display: 'block', marginBottom: '8px' }}>Description text</label>
+                        <textarea rows={4} value={draftData.about.description} onChange={e => setDraftData(prev => ({ ...prev, about: { ...prev.about, description: e.target.value } }))} style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '12px', color: '#fff', resize: 'vertical' }} />
+                      </div>
+
+                      {/* Key Points list builder */}
+                      <div>
+                        <label style={{ fontSize: '0.78rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', display: 'block', marginBottom: '12px' }}>Key Selling Points</label>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                          {draftData.about.keyPoints.map((point, idx) => (
+                            <div key={idx} style={{ display: 'flex', gap: '10px' }}>
+                              <input
+                                type="text"
+                                value={point}
+                                onChange={(e) => {
+                                  const updated = [...draftData.about.keyPoints];
+                                  updated[idx] = e.target.value;
+                                  setDraftData(prev => ({ ...prev, about: { ...prev.about, keyPoints: updated } }));
+                                }}
+                                style={{ flex: 1, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '8px', padding: '10px', color: '#fff' }}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const updated = draftData.about.keyPoints.filter((_, i) => i !== idx);
+                                  setDraftData(prev => ({ ...prev, about: { ...prev.about, keyPoints: updated } }));
+                                }}
+                                className="btn-glass admin-interactive"
+                                style={{ padding: '10px', border: '1px solid rgba(244,63,94,0.3)', color: '#f43f5e', background: 'rgba(244,63,94,0.05)' }}
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          ))}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDraftData(prev => ({
+                                ...prev,
+                                about: { ...prev.about, keyPoints: [...prev.about.keyPoints, 'New Outstanding Quality Feature'] }
+                              }));
+                            }}
+                            className="btn-glass admin-interactive"
+                            style={{ alignSelf: 'flex-start', padding: '8px 16px', fontSize: '0.72rem', gap: '6px', border: '1px solid rgba(139,92,246,0.3)' }}
+                          >
+                            <Plus size={14} /> Add Feature
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Stats editing */}
+                    <div className="glass-card" style={{ padding: '30px' }}>
+                      <h4 style={{ color: '#fbbf24', fontSize: '1rem', fontWeight: 800, marginBottom: '20px' }}>Statistics Cards</h4>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                        {draftData.stats.map((stat, idx) => (
+                          <div key={idx} style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '12px', padding: '16px' }}>
+                            <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '12px' }}>
+                              <div style={{ color: '#fbbf24' }}>
+                                <DynamicIcon name={stat.iconName} size={20} />
+                              </div>
+                              <span style={{ fontWeight: 800, fontSize: '0.82rem', color: '#94a3b8' }}>Stat Card #{idx+1}</span>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                              <input
+                                type="text"
+                                value={stat.label}
+                                placeholder="Label (e.g. Successful Events)"
+                                onChange={e => {
+                                  const updated = [...draftData.stats];
+                                  updated[idx].label = e.target.value;
+                                  setDraftData(prev => ({ ...prev, stats: updated }));
+                                }}
+                                style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '6px', padding: '8px', color: '#fff', fontSize: '0.85rem' }}
+                              />
+                              <input
+                                type="text"
+                                value={stat.value}
+                                placeholder="Value (e.g. 500+)"
+                                onChange={e => {
+                                  const updated = [...draftData.stats];
+                                  updated[idx].value = e.target.value;
+                                  setDraftData(prev => ({ ...prev, stats: updated }));
+                                }}
+                                style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '6px', padding: '8px', color: '#fbbf24', fontSize: '0.85rem', fontWeight: 700 }}
+                              />
+                              <select
+                                value={stat.iconName}
+                                onChange={e => {
+                                  const updated = [...draftData.stats];
+                                  updated[idx].iconName = e.target.value;
+                                  setDraftData(prev => ({ ...prev, stats: updated }));
+                                }}
+                                style={{ width: '100%', background: 'rgba(7, 11, 29, 0.95)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '6px', padding: '8px', color: '#fff', fontSize: '0.85rem' }}
+                              >
+                                {Object.keys(IconMap).map(icon => (
+                                  <option key={icon} value={icon}>{icon}</option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB 3: SERVICES */}
+                {adminTab === 'services' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '850px' }}>
+                    <div className="glass-card" style={{ padding: '30px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                        <h4 style={{ color: '#fbbf24', fontSize: '1rem', fontWeight: 800 }}>Manage specialties &amp; Services</h4>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newService = {
+                              title: 'New Service Item',
+                              iconName: 'Flame',
+                              desc: 'Enter an amazing service description here for your events.',
+                              color: '#fbbf24'
+                            };
+                            setDraftData(prev => ({ ...prev, services: [...prev.services, newService] }));
+                          }}
+                          className="btn-royal admin-interactive"
+                          style={{ padding: '8px 16px', fontSize: '0.78rem', gap: '6px' }}
+                        >
+                          <Plus size={14} /> Add New Service
+                        </button>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                        {draftData.services.map((s, idx) => (
+                          <div key={idx} style={{ background: 'rgba(13,21,48,0.5)', border: `1px solid rgba(${hexToRgb(s.color)}, 0.15)`, borderRadius: '16px', padding: '20px', position: 'relative' }}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const updated = draftData.services.filter((_, i) => i !== idx);
+                                setDraftData(prev => ({ ...prev, services: updated }));
+                              }}
+                              className="admin-interactive"
+                              style={{ position: 'absolute', top: '15px', right: '15px', border: 'none', background: 'transparent', color: '#f43f5e', cursor: 'pointer' }}
+                            >
+                              <Trash2 size={16} />
+                            </button>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+                              <div style={{ color: s.color, background: `rgba(${hexToRgb(s.color)}, 0.08)`, border: `1px solid rgba(${hexToRgb(s.color)}, 0.2)`, width: '40px', height: '40px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifycontent: 'center', flexShrink: 0 }}>
+                                <DynamicIcon name={s.iconName} size={20} />
+                              </div>
+                              <span style={{ fontWeight: 800, fontSize: '0.9rem', color: '#fff' }}>Service Card #{idx+1}</span>
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                              <div>
+                                <label style={{ fontSize: '0.68rem', color: '#94a3b8', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Service Title</label>
+                                <input type="text" value={s.title} onChange={e => {
+                                  const updated = [...draftData.services];
+                                  updated[idx].title = e.target.value;
+                                  setDraftData(prev => ({ ...prev, services: updated }));
+                                }} style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '6px', padding: '8px', color: '#fff', fontSize: '0.8rem' }} />
+                              </div>
+                              <div>
+                                <label style={{ fontSize: '0.68rem', color: '#94a3b8', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Description text</label>
+                                <textarea rows={2} value={s.desc} onChange={e => {
+                                  const updated = [...draftData.services];
+                                  updated[idx].desc = e.target.value;
+                                  setDraftData(prev => ({ ...prev, services: updated }));
+                                }} style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '6px', padding: '8px', color: '#94a3b8', fontSize: '0.8rem', resize: 'vertical' }} />
+                              </div>
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                <div>
+                                  <label style={{ fontSize: '0.68rem', color: '#94a3b8', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Accent Color Hex</label>
+                                  <input type="text" value={s.color} onChange={e => {
+                                    const updated = [...draftData.services];
+                                    updated[idx].color = e.target.value;
+                                    setDraftData(prev => ({ ...prev, services: updated }));
+                                  }} style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '6px', padding: '8px', color: '#fff', fontSize: '0.8rem' }} />
+                                </div>
+                                <div>
+                                  <label style={{ fontSize: '0.68rem', color: '#94a3b8', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Select Icon</label>
+                                  <select value={s.iconName} onChange={e => {
+                                    const updated = [...draftData.services];
+                                    updated[idx].iconName = e.target.value;
+                                    setDraftData(prev => ({ ...prev, services: updated }));
+                                  }} style={{ width: '100%', background: 'rgba(7,11,29,0.95)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '6px', padding: '8px', color: '#fff', fontSize: '0.8rem' }}>
+                                    {Object.keys(IconMap).map(icon => (
+                                      <option key={icon} value={icon}>{icon}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB 4: GALLERY */}
+                {adminTab === 'gallery' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '850px' }}>
+                    <div className="glass-card" style={{ padding: '30px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                        <h4 style={{ color: '#fbbf24', fontSize: '1rem', fontWeight: 800 }}>Manage Event Gallery Grid</h4>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newImage = {
+                              url: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=800',
+                              seed: 'djtruck',
+                              title: 'New Event Photo'
+                            };
+                            setDraftData(prev => ({ ...prev, gallery: [...prev.gallery, newImage] }));
+                          }}
+                          className="btn-royal admin-interactive"
+                          style={{ padding: '8px 16px', fontSize: '0.78rem', gap: '6px' }}
+                        >
+                          <Plus size={14} /> Add Image card
+                        </button>
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                        {draftData.gallery.map((img, idx) => (
+                          <div key={idx} style={{ display: 'flex', gap: '20px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '12px', padding: '16px', alignItems: 'center' }}>
+                            <div style={{ width: '80px', height: '80px', borderRadius: '8px', overflow: 'hidden', flexShrink: 0 }}>
+                              <img src={img.url} alt="Thumbnail Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.target.src = 'https://picsum.photos/seed/error/200/200'; }} />
+                            </div>
+                            <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr', gap: '10px' }}>
+                              <div>
+                                <label style={{ fontSize: '0.62rem', color: '#94a3b8', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Image URL</label>
+                                <div style={{ display: 'flex', gap: '6px' }}>
+                                  <input type="text" value={img.url} onChange={e => {
+                                    const updated = [...draftData.gallery];
+                                    updated[idx].url = e.target.value;
+                                    setDraftData(prev => ({ ...prev, gallery: updated }));
+                                  }} style={{ flex: 1, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '6px', padding: '8px', color: '#fff', fontSize: '0.78rem', minWidth: 0 }} />
+                                  <label className="btn-glass admin-interactive" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '4px', padding: '0 10px', borderRadius: '6px', border: '1px solid rgba(251, 191, 36, 0.4)', background: 'rgba(251, 191, 36, 0.08)', color: '#fbbf24', fontSize: '0.65rem', fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>
+                                    <Upload size={10} /> Choose
+                                    <input 
+                                      type="file" 
+                                      accept="image/*" 
+                                      onChange={async (e) => {
+                                        const file = e.target.files[0];
+                                        if (file) {
+                                          try {
+                                            const base64 = await compressAndResizeImage(file, 800, 0.7); // Smaller resolution & compression for gallery cards
+                                            const updated = [...draftData.gallery];
+                                            updated[idx].url = base64;
+                                            setDraftData(prev => ({ ...prev, gallery: updated }));
+                                          } catch (err) {
+                                            alert('Error loading image. Please try another file.');
+                                          }
+                                        }
+                                      }} 
+                                      style={{ display: 'none' }} 
+                                    />
+                                  </label>
+                                </div>
+                              </div>
+                              <div>
+                                <label style={{ fontSize: '0.62rem', color: '#94a3b8', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Image Caption/Title</label>
+                                <input type="text" value={img.title} onChange={e => {
+                                  const updated = [...draftData.gallery];
+                                  updated[idx].title = e.target.value;
+                                  setDraftData(prev => ({ ...prev, gallery: updated }));
+                                }} style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '6px', padding: '8px', color: '#fff', fontSize: '0.78rem' }} />
+                              </div>
+                              <div>
+                                <label style={{ fontSize: '0.62rem', color: '#94a3b8', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Fallback Seed Name</label>
+                                <input type="text" value={img.seed} onChange={e => {
+                                  const updated = [...draftData.gallery];
+                                  updated[idx].seed = e.target.value;
+                                  setDraftData(prev => ({ ...prev, gallery: updated }));
+                                }} style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '6px', padding: '8px', color: '#fff', fontSize: '0.78rem' }} />
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const updated = draftData.gallery.filter((_, i) => i !== idx);
+                                setDraftData(prev => ({ ...prev, gallery: updated }));
+                              }}
+                              className="btn-glass admin-interactive"
+                              style={{ padding: '10px', border: '1px solid rgba(244,63,94,0.3)', color: '#f43f5e', background: 'rgba(244,63,94,0.05)' }}
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB 5: PACKAGES */}
+                {adminTab === 'packages' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '850px' }}>
+                    <div className="glass-card" style={{ padding: '30px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                        <h4 style={{ color: '#fbbf24', fontSize: '1rem', fontWeight: 800 }}>Manage Booking Packages</h4>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newPkg = {
+                              name: 'Super Package',
+                              level: 'Celebration Premium',
+                              features: ['Quality Sound', 'Basic Pyro'],
+                              featured: false
+                            };
+                            setDraftData(prev => ({ ...prev, packages: [...prev.packages, newPkg] }));
+                          }}
+                          className="btn-royal admin-interactive"
+                          style={{ padding: '8px 16px', fontSize: '0.78rem', gap: '6px' }}
+                        >
+                          <Plus size={14} /> Add New Package
+                        </button>
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                        {draftData.packages.map((pkg, idx) => (
+                          <div key={idx} style={{ background: pkg.featured ? 'rgba(139, 92, 246, 0.08)' : 'rgba(0,0,0,0.2)', border: pkg.featured ? '1px solid rgba(251, 191, 36, 0.3)' : '1px solid rgba(255,255,255,0.04)', borderRadius: '16px', padding: '24px', position: 'relative' }}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const updated = draftData.packages.filter((_, i) => i !== idx);
+                                setDraftData(prev => ({ ...prev, packages: updated }));
+                              }}
+                              className="admin-interactive"
+                              style={{ position: 'absolute', top: '15px', right: '15px', border: 'none', background: 'transparent', color: '#f43f5e', cursor: 'pointer' }}
+                            >
+                              <Trash2 size={16} />
+                            </button>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: '15px', marginBottom: '15px' }}>
+                              <div>
+                                <label style={{ fontSize: '0.68rem', color: '#94a3b8', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Package Title Name</label>
+                                <input type="text" value={pkg.name} onChange={e => {
+                                  const updated = [...draftData.packages];
+                                  updated[idx].name = e.target.value;
+                                  setDraftData(prev => ({ ...prev, packages: updated }));
+                                }} style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '6px', padding: '8px', color: '#fff', fontSize: '0.8rem', fontWeight: 800 }} />
+                              </div>
+                              <div>
+                                <label style={{ fontSize: '0.68rem', color: '#94a3b8', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Target Level (e.g. Essential)</label>
+                                <input type="text" value={pkg.level} onChange={e => {
+                                  const updated = [...draftData.packages];
+                                  updated[idx].level = e.target.value;
+                                  setDraftData(prev => ({ ...prev, packages: updated }));
+                                }} style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '6px', padding: '8px', color: '#94a3b8', fontSize: '0.8rem' }} />
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', height: '100%', paddingTop: '15px' }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.82rem', color: '#fff' }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={pkg.featured}
+                                    onChange={e => {
+                                      const updated = [...draftData.packages];
+                                      updated[idx].featured = e.target.checked;
+                                      setDraftData(prev => ({ ...prev, packages: updated }));
+                                    }}
+                                    style={{ width: '16px', height: '16px', accentColor: '#fbbf24' }}
+                                  />
+                                  ⭐ Featured / Most Popular
+                                </label>
+                              </div>
+                            </div>
+
+                            {/* Features list inside package */}
+                            <div>
+                              <label style={{ fontSize: '0.68rem', color: '#94a3b8', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Package Highlights List</label>
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '10px' }}>
+                                {pkg.features.map((feature, fIdx) => (
+                                  <div key={fIdx} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(2, 6, 23, 0.4)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '6px', padding: '4px 8px' }}>
+                                    <input
+                                      type="text"
+                                      value={feature}
+                                      onChange={e => {
+                                        const updatedPkgs = [...draftData.packages];
+                                        updatedPkgs[idx].features[fIdx] = e.target.value;
+                                        setDraftData(prev => ({ ...prev, packages: updatedPkgs }));
+                                      }}
+                                      style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '0.74rem', width: '130px', outline: 'none' }}
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const updatedPkgs = [...draftData.packages];
+                                        updatedPkgs[idx].features = updatedPkgs[idx].features.filter((_, i) => i !== fIdx);
+                                        setDraftData(prev => ({ ...prev, packages: updatedPkgs }));
+                                      }}
+                                      style={{ background: 'transparent', border: 'none', color: '#f43f5e', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                                    >
+                                      <X size={12} />
+                                    </button>
+                                  </div>
+                                ))}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const updatedPkgs = [...draftData.packages];
+                                    updatedPkgs[idx].features.push('New Custom Feature');
+                                    setDraftData(prev => ({ ...prev, packages: updatedPkgs }));
+                                  }}
+                                  className="btn-glass admin-interactive"
+                                  style={{ padding: '4px 10px', fontSize: '0.62rem', gap: '4px', border: '1px solid rgba(251,191,36,0.3)', color: '#fbbf24' }}
+                                >
+                                  <Plus size={10} /> Add Item
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB 6: TESTIMONIALS */}
+                {adminTab === 'testimonials' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '850px' }}>
+                    <div className="glass-card" style={{ padding: '30px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                        <h4 style={{ color: '#fbbf24', fontSize: '1rem', fontWeight: 800 }}>Manage Client Reviews</h4>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newTestimonial = {
+                              name: 'Customer Name',
+                              role: 'Happy Client',
+                              text: 'Great work! The lighting, sound quality, and professionalism were absolutely first class.'
+                            };
+                            setDraftData(prev => ({ ...prev, testimonials: [...prev.testimonials, newTestimonial] }));
+                          }}
+                          className="btn-royal admin-interactive"
+                          style={{ padding: '8px 16px', fontSize: '0.78rem', gap: '6px' }}
+                        >
+                          <Plus size={14} /> Add Review Card
+                        </button>
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                        {draftData.testimonials.map((t, idx) => (
+                          <div key={idx} style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '12px', padding: '20px', position: 'relative' }}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const updated = draftData.testimonials.filter((_, i) => i !== idx);
+                                setDraftData(prev => ({ ...prev, testimonials: updated }));
+                              }}
+                              className="admin-interactive"
+                              style={{ position: 'absolute', top: '15px', right: '15px', border: 'none', background: 'transparent', color: '#f43f5e', cursor: 'pointer' }}
+                            >
+                              <Trash2 size={16} />
+                            </button>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '12px' }}>
+                              <div>
+                                <label style={{ fontSize: '0.62rem', color: '#94a3b8', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Client Name</label>
+                                <input type="text" value={t.name} onChange={e => {
+                                  const updated = [...draftData.testimonials];
+                                  updated[idx].name = e.target.value;
+                                  setDraftData(prev => ({ ...prev, testimonials: updated }));
+                                }} style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '6px', padding: '8px', color: '#fff', fontSize: '0.78rem' }} />
+                              </div>
+                              <div>
+                                <label style={{ fontSize: '0.62rem', color: '#94a3b8', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Client Tag/Event Role (e.g. Birthday Party)</label>
+                                <input type="text" value={t.role} onChange={e => {
+                                  const updated = [...draftData.testimonials];
+                                  updated[idx].role = e.target.value;
+                                  setDraftData(prev => ({ ...prev, testimonials: updated }));
+                                }} style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '6px', padding: '8px', color: '#a78bfa', fontSize: '0.78rem' }} />
+                              </div>
+                            </div>
+                            <div>
+                              <label style={{ fontSize: '0.62rem', color: '#94a3b8', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Review Text Body</label>
+                              <textarea rows={3} value={t.text} onChange={e => {
+                                const updated = [...draftData.testimonials];
+                                updated[idx].text = e.target.value;
+                                setDraftData(prev => ({ ...prev, testimonials: updated }));
+                              }} style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '6px', padding: '8px', color: '#cbd5e1', fontSize: '0.78rem', resize: 'vertical' }} />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB 7: FAQS */}
+                {adminTab === 'faqs' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '850px' }}>
+                    <div className="glass-card" style={{ padding: '30px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                        <h4 style={{ color: '#fbbf24', fontSize: '1rem', fontWeight: 800 }}>Manage Frequently Asked Questions</h4>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newFaq = {
+                              q: 'Do you provide backup sound systems?',
+                              a: 'Yes, we always carry spare sound consoles and amplifiers to ensure zero interruptions.'
+                            };
+                            setDraftData(prev => ({ ...prev, faqs: [...prev.faqs, newFaq] }));
+                          }}
+                          className="btn-royal admin-interactive"
+                          style={{ padding: '8px 16px', fontSize: '0.78rem', gap: '6px' }}
+                        >
+                          <Plus size={14} /> Add New FAQ Card
+                        </button>
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                        {draftData.faqs.map((faq, idx) => (
+                          <div key={idx} style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '12px', padding: '20px', position: 'relative' }}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const updated = draftData.faqs.filter((_, i) => i !== idx);
+                                setDraftData(prev => ({ ...prev, faqs: updated }));
+                              }}
+                              className="admin-interactive"
+                              style={{ position: 'absolute', top: '15px', right: '15px', border: 'none', background: 'transparent', color: '#f43f5e', cursor: 'pointer' }}
+                            >
+                              <Trash2 size={16} />
+                            </button>
+
+                            <div style={{ marginBottom: '12px' }}>
+                              <label style={{ fontSize: '0.62rem', color: '#94a3b8', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Question</label>
+                              <input type="text" value={faq.q} onChange={e => {
+                                const updated = [...draftData.faqs];
+                                updated[idx].q = e.target.value;
+                                setDraftData(prev => ({ ...prev, faqs: updated }));
+                              }} style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '6px', padding: '8px', color: '#fff', fontSize: '0.78rem', fontWeight: 700 }} />
+                            </div>
+                            <div>
+                              <label style={{ fontSize: '0.62rem', color: '#94a3b8', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Answer</label>
+                              <textarea rows={3} value={faq.a} onChange={e => {
+                                const updated = [...draftData.faqs];
+                                updated[idx].a = e.target.value;
+                                setDraftData(prev => ({ ...prev, faqs: updated }));
+                              }} style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '6px', padding: '8px', color: '#cbd5e1', fontSize: '0.78rem', resize: 'vertical' }} />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB 8: CONTACT DETAILS */}
+                {adminTab === 'contact' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '800px' }}>
+                    <div className="glass-card" style={{ padding: '30px' }}>
+                      <h4 style={{ color: '#fbbf24', fontSize: '1rem', fontWeight: 800, marginBottom: '20px' }}>Address &amp; Direct Phone contacts</h4>
+                      
+                      <div style={{ marginBottom: '20px' }}>
+                        <label style={{ fontSize: '0.78rem', color: '#94a3b8', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Store Address Location</label>
+                        <input type="text" value={draftData.contact.address} onChange={e => setDraftData(prev => ({ ...prev, contact: { ...prev.contact, address: e.target.value } }))} style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '12px', color: '#fff' }} />
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                        <div>
+                          <label style={{ fontSize: '0.78rem', color: '#94a3b8', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Chintan Patel Phone (Display)</label>
+                          <input type="text" value={draftData.contact.chintanPhone} onChange={e => setDraftData(prev => ({ ...prev, contact: { ...prev.contact, chintanPhone: e.target.value } }))} style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '12px', color: '#fff' }} />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '0.78rem', color: '#94a3b8', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Chintan Patel Raw (e.g. 9624047940)</label>
+                          <input type="text" value={draftData.contact.chintanPhoneRaw} onChange={e => setDraftData(prev => ({ ...prev, contact: { ...prev.contact, chintanPhoneRaw: e.target.value } }))} style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '12px', color: '#fff' }} />
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                        <div>
+                          <label style={{ fontSize: '0.78rem', color: '#94a3b8', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Mehul Patel Phone (Display)</label>
+                          <input type="text" value={draftData.contact.mehulPhone} onChange={e => setDraftData(prev => ({ ...prev, contact: { ...prev.contact, mehulPhone: e.target.value } }))} style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '12px', color: '#fff' }} />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '0.78rem', color: '#94a3b8', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Mehul Patel Raw (e.g. 9909505194)</label>
+                          <input type="text" value={draftData.contact.mehulPhoneRaw} onChange={e => setDraftData(prev => ({ ...prev, contact: { ...prev.contact, mehulPhoneRaw: e.target.value } }))} style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '12px', color: '#fff' }} />
+                        </div>
+                      </div>
+
+                      <div style={{ marginBottom: '20px' }}>
+                        <label style={{ fontSize: '0.78rem', color: '#94a3b8', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Email Address</label>
+                        <input type="email" value={draftData.contact.email} onChange={e => setDraftData(prev => ({ ...prev, contact: { ...prev.contact, email: e.target.value } }))} style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '12px', color: '#fff' }} />
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                        <h5 style={{ color: '#a78bfa', fontSize: '0.85rem', fontWeight: 800 }}>Social Media Links</h5>
+                        <div>
+                          <label style={{ fontSize: '0.68rem', color: '#94a3b8', display: 'block', marginBottom: '4px' }}>Instagram URL</label>
+                          <input type="text" value={draftData.contact.instagram} onChange={e => setDraftData(prev => ({ ...prev, contact: { ...prev.contact, instagram: e.target.value } }))} style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '6px', padding: '10px', color: '#cbd5e1', fontSize: '0.82rem' }} />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '0.68rem', color: '#94a3b8', display: 'block', marginBottom: '4px' }}>YouTube channel/Video Link</label>
+                          <input type="text" value={draftData.contact.youtube} onChange={e => setDraftData(prev => ({ ...prev, contact: { ...prev.contact, youtube: e.target.value } }))} style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '6px', padding: '10px', color: '#cbd5e1', fontSize: '0.82rem' }} />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '0.68rem', color: '#94a3b8', display: 'block', marginBottom: '4px' }}>WhatsApp chat/Link</label>
+                          <input type="text" value={draftData.contact.whatsapp} onChange={e => setDraftData(prev => ({ ...prev, contact: { ...prev.contact, whatsapp: e.target.value } }))} style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '6px', padding: '10px', color: '#cbd5e1', fontSize: '0.82rem' }} />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB 9: SETTINGS (PASSCODE) */}
+                {adminTab === 'settings' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '800px' }}>
+                    <div className="glass-card" style={{ padding: '30px' }}>
+                      <h4 style={{ color: '#fbbf24', fontSize: '1rem', fontWeight: 800, marginBottom: '20px' }}>Security Settings</h4>
+                      
+                      <div style={{ marginBottom: '24px' }}>
+                        <label style={{ fontSize: '0.78rem', color: '#94a3b8', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Admin Dashboard Passcode</label>
+                        <input
+                          type="text"
+                          value={draftData.adminSettings.passcode}
+                          onChange={e => setDraftData(prev => ({ ...prev, adminSettings: { passcode: e.target.value } }))}
+                          style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '12px', color: '#fbbf24', fontWeight: 'bold', fontSize: '1.1rem', letterSpacing: '2px' }}
+                        />
+                        <span style={{ display: 'block', fontSize: '0.72rem', color: '#64748b', marginTop: '6px' }}>Remember this password! It limits who can log into this Admin Panel and make dynamic edits.</span>
+                      </div>
+
+                      <div style={{ background: 'rgba(251, 191, 36, 0.05)', border: '1px solid rgba(251, 191, 36, 0.15)', borderRadius: '12px', padding: '20px' }}>
+                        <h5 style={{ color: '#fbbf24', fontWeight: 800, fontSize: '0.85rem', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <Shield size={16} /> How Option 3 Persistence Works
+                        </h5>
+                        <p style={{ fontSize: '0.78rem', color: '#94a3b8', lineHeight: 1.6 }}>
+                          Your edits are kept instantly active in your browser's <strong style={{ color: '#fff' }}>Local Storage</strong> so that they are saved locally. 
+                          <br /><br />
+                          When running this project locally in development mode via <code style={{ color: '#fbbf24' }}>npm run dev</code>, clicking "Save Changes" triggers our integrated Vite middleware, which writes all changes directly into <code style={{ color: '#fff' }}>src/data.json</code> on your computer automatically.
+                          <br /><br />
+                          If you decide to host this project statically (e.g. on Vercel, Netlify, or GitHub Pages), you can make changes on your development screen, click <strong style={{ color: '#fff' }}>Export Backup</strong>, download your modified <code style={{ color: '#fbbf24' }}>data.json</code> file, and replace the <code style={{ color: '#fff' }}>src/data.json</code> file in your source code repository, then deploy it!
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

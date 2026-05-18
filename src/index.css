@@ -1355,3 +1355,42 @@ footer::before {
     right: 10px;
   }
 }
+
+/* ============================================
+   ADMIN PORTAL SYSTEM CURSOR OVERRIDES
+   Restores standard browser mouse cursors in editor
+============================================ */
+.admin-dashboard-root,
+.admin-dashboard-root *,
+.admin-interactive,
+.admin-interactive *,
+.admin-dashboard-root input,
+.admin-dashboard-root textarea,
+.admin-dashboard-root select,
+.admin-dashboard-root button,
+.admin-interactive input,
+.admin-interactive textarea,
+.admin-interactive select,
+.admin-interactive button {
+  cursor: auto !important;
+}
+
+.admin-dashboard-root button,
+.admin-dashboard-root a,
+.admin-dashboard-root label,
+.admin-dashboard-root select,
+.admin-dashboard-root input[type="checkbox"],
+.admin-dashboard-root input[type="file"],
+.admin-interactive button,
+.admin-interactive a {
+  cursor: pointer !important;
+}
+
+.admin-dashboard-root input[type="text"],
+.admin-dashboard-root input[type="password"],
+.admin-dashboard-root input[type="tel"],
+.admin-dashboard-root input[type="email"],
+.admin-dashboard-root textarea,
+.admin-interactive input[type="password"] {
+  cursor: text !important;
+}
