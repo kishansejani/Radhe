@@ -1206,7 +1206,7 @@ const App = () => {
             transition={{ duration: 0.4 }}
           >
             {/* Sidebar Navigation */}
-            <div style={{ width: '280px', background: '#070b1d', borderRight: '1px solid rgba(139, 92, 246, 0.15)', display: 'flex', flexDirection: 'column', flexShrink: 0, padding: '24px 0' }}>
+            <div className="admin-sidebar" style={{ width: '280px', background: '#070b1d', borderRight: '1px solid rgba(139, 92, 246, 0.15)', display: 'flex', flexDirection: 'column', flexShrink: 0, padding: '24px 0' }}>
               <div style={{ padding: '0 24px 24px', borderBottom: '1px solid rgba(255, 255, 255, 0.05)', marginBottom: '20px' }}>
                 <h2 className="playfair" style={{ fontSize: '1.5rem', fontWeight: 900, letterSpacing: '1px' }}>
                   RADHE <span className="purple-gradient">DJ</span>
@@ -1217,7 +1217,7 @@ const App = () => {
               </div>
 
               {/* Sidebar Menu Items */}
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px', padding: '0 12px' }}>
+              <div className="admin-sidebar-menu" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px', padding: '0 12px' }}>
                 {[
                   { id: 'hero', label: 'Hero Section', icon: 'Zap' },
                   { id: 'about', label: 'About & Stats', icon: 'Users' },
@@ -1254,7 +1254,7 @@ const App = () => {
               </div>
 
               {/* Sidebar bottom */}
-              <div style={{ padding: '20px 16px 0', borderTop: '1px solid rgba(255, 255, 255, 0.05)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div className="admin-sidebar-bottom" style={{ padding: '20px 16px 0', borderTop: '1px solid rgba(255, 255, 255, 0.05)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <button
                   onClick={resetToFactoryDefault}
                   className="btn-glass admin-interactive"
@@ -1277,9 +1277,9 @@ const App = () => {
             </div>
 
             {/* Dashboard Workspace */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#020617', overflow: 'hidden' }}>
+            <div className="admin-workspace" style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#020617', overflow: 'hidden' }}>
               {/* Workspace Topbar */}
-              <div style={{ height: '80px', borderBottom: '1px solid rgba(139, 92, 246, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 40px', flexShrink: 0 }}>
+              <div className="admin-workspace-topbar" style={{ height: '80px', borderBottom: '1px solid rgba(139, 92, 246, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 40px', flexShrink: 0 }}>
                 <div>
                   <h3 style={{ fontSize: '1.25rem', fontWeight: 800 }}>
                     Editing: <span style={{ color: '#fbbf24' }}>{adminTab.toUpperCase()}</span>
@@ -1314,7 +1314,7 @@ const App = () => {
               </div>
 
               {/* Workspace Scroll Area Form Fields */}
-              <div style={{ flex: 1, padding: '40px', overflowY: 'auto' }}>
+              <div className="admin-workspace-content" style={{ flex: 1, padding: '40px', overflowY: 'auto' }}>
                 
                 {/* Save Toast Notification Inside Admin Panel */}
                 <AnimatePresence>

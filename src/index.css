@@ -1394,3 +1394,138 @@ footer::before {
 .admin-interactive input[type="password"] {
   cursor: text !important;
 }
+
+/* ============================================
+   ADMIN PORTAL MOBILE RESPONSIVENESS OVERRIDES
+============================================ */
+@media (max-width: 991px) {
+  .admin-dashboard-root {
+    flex-direction: column !important;
+    overflow: hidden !important;
+  }
+  
+  .admin-sidebar {
+    width: 100% !important;
+    height: auto !important;
+    border-right: none !important;
+    border-bottom: 1px solid rgba(139, 92, 246, 0.15) !important;
+    flex-shrink: 0 !important;
+    padding: 12px 0 0 0 !important;
+  }
+
+  .admin-sidebar > div:first-child {
+    padding: 8px 16px !important;
+    border-bottom: none !important;
+    margin-bottom: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+  }
+
+  .admin-sidebar > div:first-child div[style*="display: inline-flex"] {
+    margin-top: 0 !important;
+  }
+
+  .admin-sidebar-menu {
+    flex-direction: row !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    white-space: nowrap !important;
+    padding: 8px 16px !important;
+    gap: 8px !important;
+    flex: none !important;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  
+  .admin-sidebar-menu::-webkit-scrollbar {
+    display: none;
+  }
+
+  .admin-sidebar-menu button {
+    width: auto !important;
+    padding: 8px 14px !important;
+    flex-shrink: 0 !important;
+    font-size: 0.78rem !important;
+    border-left: none !important;
+    margin: 0 !important;
+  }
+
+  .admin-sidebar-bottom {
+    flex-direction: row !important;
+    padding: 12px 16px !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.05) !important;
+    gap: 10px !important;
+    width: 100% !important;
+  }
+
+  .admin-sidebar-bottom button {
+    flex: 1 !important;
+    margin: 0 !important;
+    font-size: 0.72rem !important;
+    padding: 10px !important;
+  }
+
+  .admin-workspace {
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+  }
+
+  .admin-workspace-topbar {
+    height: auto !important;
+    min-height: 60px !important;
+    padding: 12px 16px !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+  }
+
+  .admin-workspace-topbar > div:first-child h3 {
+    font-size: 1.05rem !important;
+  }
+  
+  .admin-workspace-topbar > div:first-child p {
+    font-size: 0.68rem !important;
+  }
+
+  .admin-workspace-topbar > div:last-child {
+    width: 100% !important;
+    display: flex !important;
+    justify-content: flex-end !important;
+  }
+
+  .admin-workspace-topbar > div:last-child button {
+    width: 100% !important;
+    justify-content: center !important;
+    padding: 10px !important;
+  }
+
+  .admin-workspace-content {
+    padding: 16px !important;
+    overflow-y: auto !important;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Stack column structures, like input grids and cards, vertically on mobile */
+  .admin-workspace-content div[style*="gridTemplateColumns"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  .admin-workspace-content div[style*="display: flex"][style*="gap"] {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .admin-workspace-content div[style*="display: flex"][style*="gap"] > * {
+    width: 100% !important;
+  }
+  
+  /* Ensure images in dashboards retain safe sizes */
+  .admin-workspace-content img {
+    max-width: 100% !important;
+  }
+}
