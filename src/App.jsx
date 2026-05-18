@@ -99,6 +99,24 @@ const compressAndResizeImage = (file, maxWidth = 1200, quality = 0.75) => {
   });
 };
 
+const getVideoEmbedUrl = (url) => {
+  if (!url) return '';
+  // Check for YouTube
+  const ytRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
+  const ytMatch = url.match(ytRegex);
+  if (ytMatch && ytMatch[1]) {
+    return `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&rel=0`;
+  }
+  // Check for Vimeo
+  const vimeoRegex = /(?:vimeo\.com\/)\d+/i;
+  const vimeoMatch = url.match(vimeoRegex);
+  if (vimeoMatch) {
+    const id = vimeoMatch[0].replace('vimeo.com/', '');
+    return `https://player.vimeo.com/video/${id}?autoplay=1`;
+  }
+  return null;
+};
+
 const CustomCursor = () => {
   const [isPointer, setIsPointer] = useState(false);
   const [trail, setTrail] = useState([]);
@@ -185,6 +203,10 @@ const App = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [openFaqIndex, setOpenFaqIndex] = useState(0);
   const [showScrollTop, setShowScrollTop] = useState(false);
+
+  // Gallery tabs and Media lightbox state
+  const [galleryTab, setGalleryTab] = useState('all');
+  const [activeMedia, setActiveMedia] = useState(null);
 
   // Admin Portal states
   const [isAdminOpen, setIsAdminOpen] = useState(false);
@@ -547,29 +569,114 @@ const App = () => {
 
       {/* ─────────────── GALLERY ─────────────── */}
       <section id="gallery" className="section-padding">
-        <div className="text-center" style={{ marginBottom: '4rem' }}>
+        <div className="text-center" style={{ marginBottom: '3rem' }}>
           <div className="badge">Moments</div>
           <h2 style={{ fontSize: 'clamp(1.8rem, 4vw, 3.2rem)' }}>
             Event <span className="royal-gradient">Gallery</span>
           </h2>
         </div>
-        <div className="gallery-grid">
-          {siteData.gallery.map((img, i) => (
-            <div key={i} className="gallery-card">
-              <img
-                src={img.url}
-                alt={img.title}
-                onError={(e) => { e.target.onerror = null; e.target.src = `https://picsum.photos/seed/${img.seed}/800/600`; }}
-              />
-              <div className="gallery-overlay">
-                <div>
-                  <ImageIcon style={{ color: '#fbbf24', marginBottom: '8px' }} size={26} />
-                  <h4 style={{ fontSize: '1.1rem', fontWeight: 700 }}>{img.title}</h4>
-                </div>
-              </div>
-            </div>
-          ))}
+
+        {/* Gallery Filter Tabs */}
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', marginBottom: '3rem', flexWrap: 'wrap' }}>
+          {[
+            { id: 'all', label: 'All Moments', icon: Sparkles },
+            { id: 'photos', label: 'Photos', icon: ImageIcon },
+            { id: 'videos', label: 'Videos', icon: Play }
+          ].map(tab => {
+            const isActive = galleryTab === tab.id;
+            const TabIcon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setGalleryTab(tab.id)}
+                className="btn-glass admin-interactive"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '10px 24px',
+                  borderRadius: '100px',
+                  fontSize: '0.85rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  transition: 'all 0.3s',
+                  border: isActive ? '1px solid rgba(251, 191, 36, 0.4)' : '1px solid rgba(255,255,255,0.06)',
+                  background: isActive ? 'rgba(251, 191, 36, 0.08)' : 'rgba(255,255,255,0.02)',
+                  color: isActive ? '#fbbf24' : '#94a3b8',
+                  boxShadow: isActive ? '0 0 15px rgba(251, 191, 36, 0.15)' : 'none'
+                }}
+              >
+                <TabIcon size={14} /> {tab.label}
+              </button>
+            );
+          })}
         </div>
+
+        <motion.div layout className="gallery-grid">
+          {(() => {
+            const photos = (siteData.gallery || []).map(item => ({ ...item, type: 'photo' }));
+            const videos = (siteData.galleryVideos || []).map(item => ({ ...item, type: 'video' }));
+            
+            let filteredMedia = [];
+            if (galleryTab === 'photos') filteredMedia = photos;
+            else if (galleryTab === 'videos') filteredMedia = videos;
+            else filteredMedia = [...photos, ...videos];
+            
+            return filteredMedia.map((media, i) => {
+              const isVideo = media.type === 'video';
+              const displayUrl = isVideo ? media.cover : media.url;
+              
+              return (
+                <motion.div 
+                  key={media.type + '-' + i} 
+                  layout 
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  transition={{ duration: 0.3 }}
+                  className="gallery-card"
+                  onClick={() => setActiveMedia(media)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <img
+                    src={displayUrl}
+                    alt={media.title}
+                    onError={(e) => { e.target.onerror = null; e.target.src = `https://picsum.photos/seed/${media.seed || i}/800/600`; }}
+                  />
+                  
+                  {/* Play icon badge for video cards */}
+                  {isVideo && (
+                    <div style={{ position: 'absolute', top: '15px', right: '15px', background: 'rgba(2, 6, 23, 0.75)', border: '1px solid rgba(251, 191, 36, 0.3)', borderRadius: '100px', display: 'flex', alignItems: 'center', gap: '6px', padding: '5px 12px', zIndex: 10 }}>
+                      <Play size={10} style={{ fill: '#fbbf24', color: '#fbbf24' }} />
+                      <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#fbbf24', textTransform: 'uppercase', letterSpacing: '1px' }}>Video</span>
+                    </div>
+                  )}
+                  
+                  <div className="gallery-overlay">
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                      <div className="play-btn-circle" style={{ 
+                        width: isVideo ? '60px' : '50px', 
+                        height: isVideo ? '60px' : '50px', 
+                        borderRadius: '50%', 
+                        background: isVideo ? 'rgba(251, 191, 36, 0.95)' : 'rgba(139, 92, 246, 0.9)', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center', 
+                        marginBottom: '12px',
+                        boxShadow: '0 0 20px rgba(0,0,0,0.3)',
+                        color: isVideo ? '#000' : '#fff',
+                        transition: 'all 0.3s'
+                      }}>
+                        {isVideo ? <Play size={24} style={{ fill: '#000', marginLeft: '3px' }} /> : <ImageIcon size={22} />}
+                      </div>
+                      <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#fff', textAlign: 'center', padding: '0 15px' }}>{media.title}</h4>
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            });
+          })()}
+        </motion.div>
       </section>
 
       {/* ─────────────── PACKAGES ─────────────── */}
@@ -899,6 +1006,81 @@ const App = () => {
         </a>
       </div>
 
+      {/* ─────────────── MULTIMEDIA LIGHTBOX PLAYER ─────────────── */}
+      <AnimatePresence>
+        {activeMedia && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{ 
+              position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100vh',
+              background: 'rgba(2, 6, 23, 0.95)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+              zIndex: 999999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              padding: '20px'
+            }}
+            onClick={() => setActiveMedia(null)}
+          >
+            <div 
+              style={{ position: 'relative', width: '100%', maxWidth: activeMedia.type === 'video' ? '960px' : '850px', height: 'auto', maxHeight: '85vh', display: 'flex', flexDirection: 'column', alignItems: 'center' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Close Button */}
+              <button 
+                onClick={() => setActiveMedia(null)}
+                className="admin-interactive"
+                style={{ 
+                  position: 'absolute', top: '-50px', right: '0', background: 'none', border: 'none', 
+                  color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px',
+                  fontSize: '0.85rem', fontWeight: 700, padding: '10px'
+                }}
+              >
+                <X size={20} /> Close
+              </button>
+
+              {/* Media Container */}
+              <div style={{ width: '100%', borderRadius: '16px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)', background: '#000', boxShadow: '0 25px 60px rgba(0,0,0,0.8)' }}>
+                {activeMedia.type === 'photo' ? (
+                  <img 
+                    src={activeMedia.url} 
+                    alt={activeMedia.title} 
+                    style={{ width: '100%', height: 'auto', maxHeight: '75vh', objectFit: 'contain', display: 'block' }} 
+                  />
+                ) : (
+                  <div style={{ width: '100%', aspectRatio: '16/9', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {getVideoEmbedUrl(activeMedia.url) ? (
+                      <iframe
+                        src={getVideoEmbedUrl(activeMedia.url)}
+                        title={activeMedia.title}
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                        style={{ width: '100%', height: '100%', display: 'block' }}
+                      ></iframe>
+                    ) : (
+                      <video 
+                        src={activeMedia.url} 
+                        controls 
+                        autoPlay 
+                        style={{ width: '100%', height: '100%', display: 'block' }} 
+                      />
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Title / Description Panel */}
+              <div style={{ marginTop: '1.2rem', textAlign: 'center', width: '100%', padding: '0 20px' }}>
+                <h3 className="playfair royal-gradient" style={{ fontSize: '1.4rem', fontWeight: 900, marginBottom: '4px' }}>{activeMedia.title}</h3>
+                <p style={{ color: '#94a3b8', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '2px' }}>
+                  {activeMedia.type === 'video' ? '🎥 Video Highlight' : '📸 Gallery Photo'}
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* ─────────────── PASSCODE PROMPT MODAL ─────────────── */}
       <AnimatePresence>
         {isPasscodePromptOpen && (
@@ -993,7 +1175,8 @@ const App = () => {
                   { id: 'hero', label: 'Hero Section', icon: 'Zap' },
                   { id: 'about', label: 'About & Stats', icon: 'Users' },
                   { id: 'services', label: 'Specialties', icon: 'Flame' },
-                  { id: 'gallery', label: 'Gallery Grid', icon: 'ImageIcon' },
+                  { id: 'gallery', label: 'Gallery Photos', icon: 'ImageIcon' },
+                  { id: 'galleryVideos', label: 'Gallery Videos', icon: 'Play' },
                   { id: 'packages', label: 'Pricing Packages', icon: 'Star' },
                   { id: 'testimonials', label: 'Testimonials', icon: 'Sparkles' },
                   { id: 'faqs', label: 'FAQs List', icon: 'HelpCircle' },
@@ -1054,7 +1237,7 @@ const App = () => {
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <button
+                  {/* <button
                     onClick={downloadDataJson}
                     className="btn-glass admin-interactive"
                     style={{ padding: '10px 16px', fontSize: '0.76rem', gap: '8px' }}
@@ -1068,7 +1251,7 @@ const App = () => {
                   >
                     <Upload size={14} /> Import Backup
                     <input type="file" accept=".json" onChange={handleJsonUpload} style={{ display: 'none' }} />
-                  </label>
+                  </label> */}
                   <button
                     onClick={saveAdminChanges}
                     className="btn-royal admin-interactive"
@@ -1522,6 +1705,162 @@ const App = () => {
                   </div>
                 )}
 
+                {/* TAB 4B: GALLERY VIDEOS */}
+                {adminTab === 'galleryVideos' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '850px' }}>
+                    <div className="glass-card" style={{ padding: '30px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                        <h4 style={{ color: '#fbbf24', fontSize: '1rem', fontWeight: 800 }}>Manage Event Gallery Videos</h4>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newVideo = {
+                              title: 'New Highlight Video',
+                              url: 'https://www.youtube.com/watch?v=8VJOp63Ac6o',
+                              cover: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=800'
+                            };
+                            const currentVideos = draftData.galleryVideos || [];
+                            setDraftData(prev => ({ ...prev, galleryVideos: [...currentVideos, newVideo] }));
+                          }}
+                          className="btn-royal admin-interactive"
+                          style={{ padding: '8px 16px', fontSize: '0.78rem', gap: '6px' }}
+                        >
+                          <Plus size={14} /> Add Video Card
+                        </button>
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                        {(draftData.galleryVideos || []).map((vid, idx) => (
+                          <div key={idx} style={{ display: 'flex', gap: '20px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '12px', padding: '16px', alignItems: 'center' }}>
+                            {/* Video Cover Thumbnail Preview */}
+                            <div style={{ width: '80px', height: '80px', borderRadius: '8px', overflow: 'hidden', flexShrink: 0 }}>
+                              <img src={vid.cover} alt="Video Cover Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.target.src = 'https://picsum.photos/seed/error/200/200'; }} />
+                            </div>
+                            
+                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                              {/* Row 1: Full-width Video Title */}
+                              <div>
+                                <label style={{ fontSize: '0.62rem', color: '#94a3b8', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Video Title</label>
+                                <input 
+                                  type="text" 
+                                  value={vid.title} 
+                                  onChange={e => {
+                                    const updated = [...draftData.galleryVideos];
+                                    updated[idx].title = e.target.value;
+                                    setDraftData(prev => ({ ...prev, galleryVideos: updated }));
+                                  }} 
+                                  style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '6px', padding: '8px', color: '#fff', fontSize: '0.78rem' }} 
+                                />
+                              </div>
+
+                              {/* Row 2: Two equal columns for Video URL and Cover Image */}
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                {/* Video URL */}
+                                <div>
+                                  <label style={{ fontSize: '0.62rem', color: '#94a3b8', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Video URL (YouTube or MP4)</label>
+                                  <div style={{ display: 'flex', gap: '6px' }}>
+                                    <input 
+                                      type="text" 
+                                      value={vid.url} 
+                                      onChange={e => {
+                                        const updated = [...draftData.galleryVideos];
+                                        updated[idx].url = e.target.value;
+                                        setDraftData(prev => ({ ...prev, galleryVideos: updated }));
+                                      }} 
+                                      style={{ flex: 1, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '6px', padding: '8px', color: '#fff', fontSize: '0.78rem', minWidth: 0 }} 
+                                    />
+                                    <label className="btn-glass admin-interactive" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '4px', padding: '0 10px', borderRadius: '6px', border: '1px solid rgba(251, 191, 36, 0.4)', background: 'rgba(251, 191, 36, 0.08)', color: '#fbbf24', fontSize: '0.65rem', fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>
+                                      <Upload size={10} /> Choose
+                                      <input 
+                                        type="file" 
+                                        accept="video/*" 
+                                        onChange={async (e) => {
+                                          const file = e.target.files[0];
+                                          if (file) {
+                                            // Limit size to 3.5MB to stay safely under LocalStorage 5MB quota and prevent JSON bloating
+                                            if (file.size > 3.5 * 1024 * 1024) {
+                                              alert("Video size is too large! Since storing videos inside the code database makes the site slow, please select a small video clip (under 3.5MB), or upload it to YouTube and paste the link here for high quality!");
+                                              return;
+                                            }
+                                            
+                                            const reader = new FileReader();
+                                            reader.readAsDataURL(file);
+                                            reader.onload = (event) => {
+                                              const base64 = event.target.result;
+                                              const updated = [...draftData.galleryVideos];
+                                              updated[idx].url = base64;
+                                              setDraftData(prev => ({ ...prev, galleryVideos: updated }));
+                                            };
+                                            reader.onerror = () => {
+                                              alert("Error loading video file. Please try another file.");
+                                            };
+                                          }
+                                        }} 
+                                        style={{ display: 'none' }} 
+                                      />
+                                    </label>
+                                  </div>
+                                </div>
+
+                                {/* Video Cover Image */}
+                                <div>
+                                  <label style={{ fontSize: '0.62rem', color: '#94a3b8', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Cover Image</label>
+                                  <div style={{ display: 'flex', gap: '6px' }}>
+                                    <input 
+                                      type="text" 
+                                      value={vid.cover} 
+                                      onChange={e => {
+                                        const updated = [...draftData.galleryVideos];
+                                        updated[idx].cover = e.target.value;
+                                        setDraftData(prev => ({ ...prev, galleryVideos: updated }));
+                                      }} 
+                                      style={{ flex: 1, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '6px', padding: '8px', color: '#fff', fontSize: '0.78rem', minWidth: 0 }} 
+                                    />
+                                    <label className="btn-glass admin-interactive" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '4px', padding: '0 10px', borderRadius: '6px', border: '1px solid rgba(251, 191, 36, 0.4)', background: 'rgba(251, 191, 36, 0.08)', color: '#fbbf24', fontSize: '0.65rem', fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>
+                                      <Upload size={10} /> Choose
+                                      <input 
+                                        type="file" 
+                                        accept="image/*" 
+                                        onChange={async (e) => {
+                                          const file = e.target.files[0];
+                                          if (file) {
+                                            try {
+                                              const base64 = await compressAndResizeImage(file, 800, 0.7);
+                                              const updated = [...draftData.galleryVideos];
+                                              updated[idx].cover = base64;
+                                              setDraftData(prev => ({ ...prev, galleryVideos: updated }));
+                                            } catch (err) {
+                                              alert('Error loading image. Please try another file.');
+                                            }
+                                          }
+                                        }} 
+                                        style={{ display: 'none' }} 
+                                      />
+                                    </label>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {/* Trash Delete button */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const updated = draftData.galleryVideos.filter((_, i) => i !== idx);
+                                setDraftData(prev => ({ ...prev, galleryVideos: updated }));
+                              }}
+                              className="btn-glass admin-interactive"
+                              style={{ padding: '10px', border: '1px solid rgba(244,63,94,0.3)', color: '#f43f5e', background: 'rgba(244,63,94,0.05)' }}
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* TAB 5: PACKAGES */}
                 {adminTab === 'packages' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '850px' }}>
@@ -1850,18 +2189,7 @@ const App = () => {
                         <span style={{ display: 'block', fontSize: '0.72rem', color: '#64748b', marginTop: '6px' }}>Remember this password! It limits who can log into this Admin Panel and make dynamic edits.</span>
                       </div>
 
-                      <div style={{ background: 'rgba(251, 191, 36, 0.05)', border: '1px solid rgba(251, 191, 36, 0.15)', borderRadius: '12px', padding: '20px' }}>
-                        <h5 style={{ color: '#fbbf24', fontWeight: 800, fontSize: '0.85rem', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <Shield size={16} /> How Option 3 Persistence Works
-                        </h5>
-                        <p style={{ fontSize: '0.78rem', color: '#94a3b8', lineHeight: 1.6 }}>
-                          Your edits are kept instantly active in your browser's <strong style={{ color: '#fff' }}>Local Storage</strong> so that they are saved locally. 
-                          <br /><br />
-                          When running this project locally in development mode via <code style={{ color: '#fbbf24' }}>npm run dev</code>, clicking "Save Changes" triggers our integrated Vite middleware, which writes all changes directly into <code style={{ color: '#fff' }}>src/data.json</code> on your computer automatically.
-                          <br /><br />
-                          If you decide to host this project statically (e.g. on Vercel, Netlify, or GitHub Pages), you can make changes on your development screen, click <strong style={{ color: '#fff' }}>Export Backup</strong>, download your modified <code style={{ color: '#fbbf24' }}>data.json</code> file, and replace the <code style={{ color: '#fff' }}>src/data.json</code> file in your source code repository, then deploy it!
-                        </p>
-                      </div>
+                    
                     </div>
                   </div>
                 )}
