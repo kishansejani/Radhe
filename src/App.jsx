@@ -61,6 +61,77 @@ const GlowingBlobs = () => {
   );
 };
 
+const FloatingBubbles = () => {
+  const bubbles = Array.from({ length: 45 }).map((_, i) => {
+    const size = Math.random() * 80 + 30; // Large sizes: 30px to 110px
+    const left = `${Math.random() * 100}%`;
+    // Negative delay pre-populates bubbles all over the screen on load!
+    const delay = -(Math.random() * 35); 
+    const duration = Math.random() * 20 + 15; // Slow majestic movement: 15s to 35s
+    const maxOpacity = Math.random() * 0.35 + 0.15; // 15% to 50% opacity for high visibility
+    const drift1 = `${Math.random() * 80 - 40}px`;
+    const drift2 = `${Math.random() * 120 - 60}px`;
+
+    // Curated high-contrast primary colors matching brand palette
+    const colors = [
+      'radial-gradient(circle at 30% 30%, rgba(251, 191, 36, 0.75) 0%, rgba(251, 191, 36, 0.25) 50%, transparent 100%)', // Gold
+      'radial-gradient(circle at 30% 30%, rgba(139, 92, 246, 0.75) 0%, rgba(139, 92, 246, 0.25) 50%, transparent 100%)', // Purple
+      'radial-gradient(circle at 30% 30%, rgba(6, 182, 212, 0.75) 0%, rgba(6, 182, 212, 0.25) 50%, transparent 100%)',  // Cyan
+    ];
+    const borderColor = [
+      'rgba(251, 191, 36, 0.65)',
+      'rgba(139, 92, 246, 0.65)',
+      'rgba(6, 182, 212, 0.65)'
+    ][i % 3];
+    const glowShadow = [
+      '0 0 15px rgba(251, 191, 36, 0.35), inset 0 2px 5px rgba(255,255,255,0.3)',
+      '0 0 15px rgba(139, 92, 246, 0.35), inset 0 2px 5px rgba(255,255,255,0.3)',
+      '0 0 15px rgba(6, 182, 212, 0.35), inset 0 2px 5px rgba(255,255,255,0.3)'
+    ][i % 3];
+    
+    return {
+      id: i,
+      size,
+      left,
+      delay: `${delay}s`,
+      duration: `${duration}s`,
+      maxOpacity,
+      drift1,
+      drift2,
+      background: colors[i % 3],
+      borderColor,
+      glowShadow
+    };
+  });
+
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+      {bubbles.map((b) => (
+        <div
+          key={b.id}
+          className="absolute rounded-full"
+          style={{
+            width: b.size,
+            height: b.size,
+            left: b.left,
+            bottom: '-120px',
+            background: b.background,
+            border: `1px solid ${b.borderColor}`,
+            boxShadow: b.glowShadow,
+            filter: 'blur(0.8px)', // Extremely soft bokeh anti-aliasing (retains sharpness and details!)
+            pointerEvents: 'none',
+            animation: `floatUp ${b.duration} linear infinite`,
+            animationDelay: b.delay,
+            '--max-op': b.maxOpacity,
+            '--drift-1': b.drift1,
+            '--drift-2': b.drift2,
+          }}
+        />
+      ))}
+    </div>
+  );
+};
+
 const hexToRgb = (hex) => {
   if (!hex) return "6, 182, 212";
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -241,6 +312,41 @@ const App = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Handle URL changes for /admin or #admin direct routing
+  useEffect(() => {
+    const checkAdminRoute = () => {
+      const isAdminHash = window.location.hash === '#admin';
+      const isAdminPath = window.location.pathname === '/admin' || window.location.pathname === '/admin/';
+      
+      if (isAdminHash || isAdminPath) {
+        const sessionActive = localStorage.getItem('isAdminSessionActive') === 'true';
+        if (sessionActive) {
+          setIsAdminOpen(true);
+          setDraftData(prev => prev ? prev : JSON.parse(JSON.stringify(siteData)));
+        } else {
+          setIsPasscodePromptOpen(true);
+          setEnteredPasscode('');
+          setPasscodeError('');
+        }
+      } else {
+        // If they navigate away or manually remove '/admin' or '#admin', close both dashboard and passcode prompts!
+        setIsAdminOpen(false);
+        setIsPasscodePromptOpen(false);
+        setDraftData(null);
+      }
+    };
+
+    window.addEventListener('hashchange', checkAdminRoute);
+    window.addEventListener('popstate', checkAdminRoute);
+    // Execute on initial page load immediately
+    checkAdminRoute();
+
+    return () => {
+      window.removeEventListener('hashchange', checkAdminRoute);
+      window.removeEventListener('popstate', checkAdminRoute);
+    };
+  }, [siteData]);
+
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -386,7 +492,10 @@ const App = () => {
         <div className="nav-links">
           {navLinks.map(l => <a key={l.href} href={l.href}>{l.label}</a>)}
           <button 
-            onClick={isAdminOpen ? () => setIsAdminOpen(true) : openPasscodePrompt} 
+            onClick={() => {
+              window.history.pushState({}, '', '/admin');
+              window.dispatchEvent(new Event('popstate'));
+            }} 
             className="admin-interactive" 
             style={{ 
               background: 'none', border: 'none', color: '#fbbf24', cursor: 'pointer', fontSize: '0.9rem', 
@@ -433,11 +542,8 @@ const App = () => {
             <button 
               onClick={() => {
                 setMenuOpen(false);
-                if (isAdminOpen) {
-                  setIsAdminOpen(true);
-                } else {
-                  openPasscodePrompt();
-                }
+                window.history.pushState({}, '', '/admin');
+                window.dispatchEvent(new Event('popstate'));
               }}
               className="admin-interactive" 
               style={{ 
@@ -470,6 +576,7 @@ const App = () => {
             style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.28 }}
           />
           <div className="absolute inset-0 hero-overlay" />
+          <FloatingBubbles />
         </div>
 
         <div className="hero-content">
@@ -1173,7 +1280,15 @@ const App = () => {
                     type="button" 
                     className="btn-glass" 
                     style={{ flex: 1, padding: '12px', fontSize: '0.8rem' }}
-                    onClick={() => setIsPasscodePromptOpen(false)}
+                    onClick={() => {
+                      setIsPasscodePromptOpen(false);
+                      if (window.location.hash === '#admin') {
+                        window.location.hash = '';
+                      }
+                      if (window.location.pathname === '/admin' || window.location.pathname === '/admin/') {
+                        window.history.pushState({}, '', '/');
+                      }
+                    }}
                   >
                     Cancel
                   </button>
@@ -1267,6 +1382,12 @@ const App = () => {
                     localStorage.removeItem('isAdminSessionActive');
                     setIsAdminOpen(false);
                     setDraftData(null);
+                    if (window.location.hash === '#admin') {
+                      window.location.hash = '';
+                    }
+                    if (window.location.pathname === '/admin' || window.location.pathname === '/admin/') {
+                      window.history.pushState({}, '', '/');
+                    }
                   }}
                   className="btn-glass admin-interactive"
                   style={{ width: '100%', padding: '10px', fontSize: '0.72rem', justifyContent: 'center', borderColor: 'rgba(255,255,255,0.15)' }}

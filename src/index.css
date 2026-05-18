@@ -1529,3 +1529,28 @@ footer::before {
     max-width: 100% !important;
   }
 }
+
+/* ============================================
+   CONTINUOUS BUBBLE PARTICLES FLOATING KEYFRAMES
+============================================ */
+@keyframes floatUp {
+  0% {
+    transform: translateY(0) translateX(0) scale(0.5);
+    opacity: 0;
+  }
+  10% {
+    opacity: var(--max-op);
+    transform: translateY(-12vh) translateX(var(--drift-1)) scale(1);
+  }
+  50% {
+    transform: translateY(-60vh) translateX(var(--drift-2)) scale(1.15);
+  }
+  90% {
+    opacity: var(--max-op);
+    transform: translateY(-108vh) translateX(var(--drift-1)) scale(0.9);
+  }
+  100% {
+    transform: translateY(-135vh) translateX(0) scale(0.4);
+    opacity: 0;
+  }
+}
