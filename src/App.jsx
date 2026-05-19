@@ -63,7 +63,7 @@ const GlowingBlobs = () => {
 
 const FloatingBubbles = () => {
   const bubbles = Array.from({ length: 20 }).map((_, i) => {
-    const size = Math.random() * 25 + 10; // Optimized smaller sizes: 10px to 35px
+    const size = Math.random() * 45 + 15; // Balanced sizes: 15px to 60px
     const left = `${Math.random() * 100}%`;
     // Negative delay pre-populates bubbles all over the screen on load!
     const delay = -(Math.random() * 35); 
