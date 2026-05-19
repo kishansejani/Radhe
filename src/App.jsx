@@ -62,31 +62,31 @@ const GlowingBlobs = () => {
 };
 
 const FloatingBubbles = () => {
-  const bubbles = Array.from({ length: 45 }).map((_, i) => {
-    const size = Math.random() * 80 + 30; // Large sizes: 30px to 110px
+  const bubbles = Array.from({ length: 20 }).map((_, i) => {
+    const size = Math.random() * 25 + 10; // Optimized smaller sizes: 10px to 35px
     const left = `${Math.random() * 100}%`;
     // Negative delay pre-populates bubbles all over the screen on load!
     const delay = -(Math.random() * 35); 
     const duration = Math.random() * 20 + 15; // Slow majestic movement: 15s to 35s
-    const maxOpacity = Math.random() * 0.35 + 0.15; // 15% to 50% opacity for high visibility
-    const drift1 = `${Math.random() * 80 - 40}px`;
-    const drift2 = `${Math.random() * 120 - 60}px`;
+    const maxOpacity = Math.random() * 0.25 + 0.1; // 10% to 35% opacity for elegant visibility
+    const drift1 = `${Math.random() * 60 - 30}px`;
+    const drift2 = `${Math.random() * 90 - 45}px`;
 
     // Curated high-contrast primary colors matching brand palette
     const colors = [
-      'radial-gradient(circle at 30% 30%, rgba(251, 191, 36, 0.75) 0%, rgba(251, 191, 36, 0.25) 50%, transparent 100%)', // Gold
-      'radial-gradient(circle at 30% 30%, rgba(139, 92, 246, 0.75) 0%, rgba(139, 92, 246, 0.25) 50%, transparent 100%)', // Purple
-      'radial-gradient(circle at 30% 30%, rgba(6, 182, 212, 0.75) 0%, rgba(6, 182, 212, 0.25) 50%, transparent 100%)',  // Cyan
+      'radial-gradient(circle at 30% 30%, rgba(251, 191, 36, 0.55) 0%, rgba(251, 191, 36, 0.15) 50%, transparent 100%)', // Gold
+      'radial-gradient(circle at 30% 30%, rgba(139, 92, 246, 0.55) 0%, rgba(139, 92, 246, 0.15) 50%, transparent 100%)', // Purple
+      'radial-gradient(circle at 30% 30%, rgba(6, 182, 212, 0.55) 0%, rgba(6, 182, 212, 0.15) 50%, transparent 100%)',  // Cyan
     ];
     const borderColor = [
-      'rgba(251, 191, 36, 0.65)',
-      'rgba(139, 92, 246, 0.65)',
-      'rgba(6, 182, 212, 0.65)'
+      'rgba(251, 191, 36, 0.35)',
+      'rgba(139, 92, 246, 0.35)',
+      'rgba(6, 182, 212, 0.35)'
     ][i % 3];
     const glowShadow = [
-      '0 0 15px rgba(251, 191, 36, 0.35), inset 0 2px 5px rgba(255,255,255,0.3)',
-      '0 0 15px rgba(139, 92, 246, 0.35), inset 0 2px 5px rgba(255,255,255,0.3)',
-      '0 0 15px rgba(6, 182, 212, 0.35), inset 0 2px 5px rgba(255,255,255,0.3)'
+      '0 0 8px rgba(251, 191, 36, 0.25), inset 0 1px 3px rgba(255,255,255,0.2)',
+      '0 0 8px rgba(139, 92, 246, 0.25), inset 0 1px 3px rgba(255,255,255,0.2)',
+      '0 0 8px rgba(6, 182, 212, 0.25), inset 0 1px 3px rgba(255,255,255,0.2)'
     ][i % 3];
     
     return {
@@ -118,7 +118,7 @@ const FloatingBubbles = () => {
             background: b.background,
             border: `1px solid ${b.borderColor}`,
             boxShadow: b.glowShadow,
-            filter: 'blur(0.8px)', // Extremely soft bokeh anti-aliasing (retains sharpness and details!)
+            filter: 'blur(0.5px)', // Soft bokeh anti-aliasing
             pointerEvents: 'none',
             animation: `floatUp ${b.duration} linear infinite`,
             animationDelay: b.delay,
@@ -270,6 +270,27 @@ const App = () => {
     return initialData;
   });
 
+  // Background sync from remote cloud database (npoint.io)
+  useEffect(() => {
+    const fetchRemoteData = async () => {
+      try {
+        const response = await fetch('https://api.npoint.io/18c0988ee7be366e16ee');
+        if (response.ok) {
+          const freshData = await response.json();
+          // Verify it has the expected structure
+          if (freshData.hero && freshData.about && freshData.services) {
+            setSiteData(freshData);
+            setDraftData(freshData);
+            localStorage.setItem('radhe_site_data', JSON.stringify(freshData));
+          }
+        }
+      } catch (err) {
+        console.warn("Could not sync with cloud database. Using local/cached storage.", err);
+      }
+    };
+    fetchRemoteData();
+  }, []);
+
   const [formData, setFormData] = useState({ name: '', phone: '', event: '', message: '' });
   const [menuOpen, setMenuOpen] = useState(false);
   const [openFaqIndex, setOpenFaqIndex] = useState(0);
@@ -388,7 +409,7 @@ const App = () => {
 
   const saveAdminChanges = async () => {
     setSaveStatus('saving');
-    setSaveMsg('Saving content...');
+    setSaveMsg('Saving content to cloud & local storage...');
     
     // 1. Save to LocalState
     setSiteData(draftData);
@@ -396,7 +417,26 @@ const App = () => {
     // 2. Save to Browser Storage
     localStorage.setItem('radhe_site_data', JSON.stringify(draftData));
 
-    // 3. Save to local Vite dev server file directly
+    let savedToCloud = false;
+    let savedToLocalFile = false;
+
+    // 3. Save to Remote Cloud Database (npoint.io)
+    try {
+      const cloudResponse = await fetch('https://api.npoint.io/18c0988ee7be366e16ee', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(draftData),
+      });
+      if (cloudResponse.ok) {
+        savedToCloud = true;
+      }
+    } catch (err) {
+      console.error("Failed to save to remote cloud database:", err);
+    }
+
+    // 4. Save to local Vite dev server file directly (for local development files sync)
     try {
       const response = await fetch('/api/save-data', {
         method: 'POST',
@@ -407,16 +447,24 @@ const App = () => {
       });
 
       if (response.ok) {
-        setSaveStatus('success');
-        setSaveMsg('Changes saved directly to data.json & local storage successfully!');
-      } else {
-        setSaveStatus('success');
-        setSaveMsg('Saved locally in browser storage (Development Server bypassed).');
+        savedToLocalFile = true;
       }
     } catch (err) {
-      console.warn("Could not save to local dev server. Running static host mode. Saved in browser storage.", err);
+      // Bypassed on static production server (Vercel)
+    }
+
+    if (savedToCloud && savedToLocalFile) {
       setSaveStatus('success');
-      setSaveMsg('Saved in local browser storage. Use Download button to get your updated data.json!');
+      setSaveMsg('Changes saved to Cloud Database & local data.json successfully!');
+    } else if (savedToCloud) {
+      setSaveStatus('success');
+      setSaveMsg('Changes saved directly to Cloud Database successfully (Live Everywhere)!');
+    } else if (savedToLocalFile) {
+      setSaveStatus('success');
+      setSaveMsg('Saved locally on disk. Cloud database sync failed.');
+    } else {
+      setSaveStatus('success');
+      setSaveMsg('Saved locally in browser storage (Offline Mode).');
     }
 
     setTimeout(() => {
@@ -424,11 +472,25 @@ const App = () => {
     }, 4000);
   };
 
-  const resetToFactoryDefault = () => {
+  const resetToFactoryDefault = async () => {
     if (window.confirm("Are you sure you want to reset ALL data back to default settings? All custom edits will be deleted.")) {
       setDraftData(JSON.parse(JSON.stringify(initialData)));
       setSiteData(initialData);
       localStorage.setItem('radhe_site_data', JSON.stringify(initialData));
+      
+      // Reset remote cloud database too
+      try {
+        await fetch('https://api.npoint.io/18c0988ee7be366e16ee', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(initialData),
+        });
+      } catch (err) {
+        console.error("Failed to reset remote cloud database:", err);
+      }
+      
       alert("Successfully restored factory defaults!");
     }
   };
