@@ -682,12 +682,12 @@ const App = () => {
             transition={{ delay: 0.65 }}
             className="hero-btns"
           >
-            <a href={siteData.hero.btnExploreLink} className="btn-royal">
+            {/* <a href={siteData.hero.btnExploreLink} className="btn-royal">
               {siteData.hero.btnExploreText} <ArrowRight size={18} />
             </a>
             <a href={siteData.hero.btnQuoteLink} className="btn-glass">
               {siteData.hero.btnQuoteText}
-            </a>
+            </a> */}
           </motion.div>
         </div>
 
