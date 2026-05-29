@@ -262,7 +262,8 @@ const App = () => {
     const cached = localStorage.getItem('radhe_site_data');
     if (cached) {
       try {
-        return JSON.parse(cached);
+        const parsed = JSON.parse(cached);
+        return { ...initialData, ...parsed };
       } catch (err) {
         console.error("Error reading radhe_site_data from localStorage", err);
       }
@@ -279,9 +280,10 @@ const App = () => {
           const freshData = await response.json();
           // Verify it has the expected structure
           if (freshData.hero && freshData.about && freshData.services) {
-            setSiteData(freshData);
-            setDraftData(freshData);
-            localStorage.setItem('radhe_site_data', JSON.stringify(freshData));
+            const merged = { ...initialData, ...freshData };
+            setSiteData(merged);
+            setDraftData(merged);
+            localStorage.setItem('radhe_site_data', JSON.stringify(merged));
           }
         }
       } catch (err) {
@@ -328,7 +330,8 @@ const App = () => {
       const cached = localStorage.getItem('radhe_site_data');
       if (cached) {
         try {
-          return JSON.parse(cached);
+          const parsed = JSON.parse(cached);
+          return { ...initialData, ...parsed };
         } catch (err) {}
       }
       return JSON.parse(JSON.stringify(initialData));
