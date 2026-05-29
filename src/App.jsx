@@ -291,6 +291,20 @@ const App = () => {
     fetchRemoteData();
   }, []);
 
+  // Dynamic Elfsight script loader for Google Reviews
+  useEffect(() => {
+    if (siteData.googleReviewWidgetId) {
+      const existingScript = document.querySelector('script[src="https://elfsightcdn.com/platform.js"]');
+      if (!existingScript) {
+        const script = document.createElement('script');
+        script.src = "https://elfsightcdn.com/platform.js";
+        script.async = true;
+        script.defer = true;
+        document.body.appendChild(script);
+      }
+    }
+  }, [siteData.googleReviewWidgetId]);
+
   const [formData, setFormData] = useState({ name: '', phone: '', event: '', message: '' });
   const [menuOpen, setMenuOpen] = useState(false);
   const [openFaqIndex, setOpenFaqIndex] = useState(0);
@@ -951,24 +965,30 @@ const App = () => {
           </h2>
         </div>
 
-        <div className="testimonials-grid">
-          {siteData.testimonials.map((t, i) => (
-            <motion.div
-              key={i}
-              whileHover={{ y: -10 }}
-              className="glass-card testimonial-card"
-            >
-              <div style={{ display: 'flex', gap: '4px', marginBottom: '1.2rem' }}>
-                {[...Array(5)].map((_, idx) => <Star key={idx} size={16} fill="#fbbf24" color="#fbbf24" />)}
-              </div>
-              <p style={{ fontStyle: 'italic', color: '#cbd5e1', marginBottom: '2rem', lineHeight: 1.8 }}>"{t.text}"</p>
-              <div>
-                <h4 style={{ fontWeight: 800, color: '#fff' }}>{t.name}</h4>
-                <p style={{ color: '#8b5cf6', fontSize: '0.8rem', fontWeight: 700 }}>{t.role}</p>
-              </div>
-            </motion.div>
-          ))}
-        </div>
+        {siteData.googleReviewWidgetId ? (
+          <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px' }}>
+            <div className={`elfsight-app-${siteData.googleReviewWidgetId}`} data-elfsight-app-lazy></div>
+          </div>
+        ) : (
+          <div className="testimonials-grid">
+            {siteData.testimonials.map((t, i) => (
+              <motion.div
+                key={i}
+                whileHover={{ y: -10 }}
+                className="glass-card testimonial-card"
+              >
+                <div style={{ display: 'flex', gap: '4px', marginBottom: '1.2rem' }}>
+                  {[...Array(5)].map((_, idx) => <Star key={idx} size={16} fill="#fbbf24" color="#fbbf24" />)}
+                </div>
+                <p style={{ fontStyle: 'italic', color: '#cbd5e1', marginBottom: '2rem', lineHeight: 1.8 }}>"{t.text}"</p>
+                <div>
+                  <h4 style={{ fontWeight: 800, color: '#fff' }}>{t.name}</h4>
+                  <p style={{ color: '#8b5cf6', fontSize: '0.8rem', fontWeight: 700 }}>{t.role}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* ─────────────── FAQ ─────────────── */}
@@ -2229,6 +2249,27 @@ const App = () => {
                 {/* TAB 6: TESTIMONIALS */}
                 {adminTab === 'testimonials' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '850px' }}>
+                    {/* Google Reviews Widget ID Configuration */}
+                    <div className="glass-card" style={{ padding: '30px' }}>
+                      <h4 style={{ color: '#fbbf24', fontSize: '1rem', fontWeight: 800, marginBottom: '16px' }}>Google Reviews Integration</h4>
+                      <p style={{ color: '#94a3b8', fontSize: '0.82rem', lineHeight: 1.6, marginBottom: '20px' }}>
+                        Enter your Elfsight Google Reviews Widget ID to display live Google reviews. If left blank, the website will automatically fall back to the dynamic testimonial cards configured below.
+                      </p>
+                      <div>
+                        <label style={{ fontSize: '0.68rem', color: '#a78bfa', textTransform: 'uppercase', letterSpacing: '1px', display: 'block', marginBottom: '8px' }}>Elfsight Widget ID</label>
+                        <input
+                          type="text"
+                          value={draftData.googleReviewWidgetId || ''}
+                          placeholder="e.g. bd770a68-968c-4511-aa5b-1210522569b0"
+                          onChange={e => setDraftData(prev => ({ ...prev, googleReviewWidgetId: e.target.value }))}
+                          style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '12px', color: '#fff', fontSize: '0.85rem' }}
+                        />
+                        <span style={{ display: 'block', fontSize: '0.72rem', color: '#64748b', marginTop: '8px' }}>
+                          Find your widget ID in the Elfsight dashboard. Leave this field empty to use manual testimonials instead.
+                        </span>
+                      </div>
+                    </div>
+
                     <div className="glass-card" style={{ padding: '30px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
                         <h4 style={{ color: '#fbbf24', fontSize: '1rem', fontWeight: 800 }}>Manage Client Reviews</h4>
