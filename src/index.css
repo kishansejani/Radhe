@@ -1554,3 +1554,99 @@ footer::before {
     opacity: 0;
   }
 }
+
+/* ============================================
+   ELFSIGHT GOOGLE REVIEWS OVERRIDES
+   Customizing theme to dark mode & removing branding/owner toolbars
+============================================ */
+
+/* 1. Remove Elfsight Free branding badge links */
+a[href*="elfsight.com"],
+[class*="elfsight-app"] a[href*="elfsight.com"],
+[class*="Link__CopyContainer"],
+[class*="Link__Container"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  height: 0 !important;
+  pointer-events: none !important;
+}
+
+/* 2. Hide widget owner edit toolbars */
+[class*="Toolbar__Container"],
+[class*="eapps-widget-toolbar"],
+[class*="eapps-preview-toolbar"],
+[class*="PlatformElement__Container"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  height: 0 !important;
+  pointer-events: none !important;
+}
+
+/* 3. Apply Premium Dark Mode / Glassmorphism theme to reviews */
+/* Root container background */
+[class*="elfsight-app"] [class*="Container__Component"],
+[class*="elfsight-app"] [class*="Main__Component"],
+[class*="elfsight-app"] [class*="layout__Component"] {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* Header customization */
+[class*="elfsight-app"] [class*="Header__Container"],
+[class*="elfsight-app"] [class*="Header__Component"] {
+  background: transparent !important;
+  color: #fff !important;
+}
+
+[class*="elfsight-app"] [class*="Header__Title"],
+[class*="elfsight-app"] [class*="Title__Container"],
+[class*="elfsight-app"] [class*="Title__Component"] {
+  color: #fff !important;
+}
+
+/* Individual card styling overrides to match your card theme */
+[class*="elfsight-app"] [class*="Card__Container"],
+[class*="elfsight-app"] [class*="Card__Component"],
+[class*="elfsight-app"] [class*="Item__Container"],
+[class*="elfsight-app"] [class*="Card__Card"] {
+  background: rgba(255, 255, 255, 0.03) !important;
+  background-color: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.05) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  border-radius: 16px !important;
+  color: #fff !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25) !important;
+}
+
+/* Reviewer Name */
+[class*="elfsight-app"] [class*="Name__Container"],
+[class*="elfsight-app"] [class*="Name__Component"] {
+  color: #fff !important;
+}
+
+/* Review Text */
+[class*="elfsight-app"] [class*="Text__Container"],
+[class*="elfsight-app"] [class*="Text__Component"],
+[class*="elfsight-app"] [class*="ReviewText__Component"],
+[class*="elfsight-app"] [class*="ReviewText__Container"] {
+  color: #cbd5e1 !important;
+}
+
+/* Standard nested typography elements inside reviews */
+[class*="elfsight-app"] span,
+[class*="elfsight-app"] p,
+[class*="elfsight-app"] div {
+  color: #cbd5e1;
+}
+
+/* Make strong names bold and white */
+[class*="elfsight-app"] strong,
+[class*="elfsight-app"] h1,
+[class*="elfsight-app"] h2,
+[class*="elfsight-app"] h3,
+[class*="elfsight-app"] h4 {
+  color: #fff !important;
+}
