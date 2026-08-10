@@ -229,6 +229,33 @@
     "youtube": "https://youtu.be/8VJOp63Ac6o?si=vFoGOL-w6rRi65iH",
     "whatsapp": "https://wa.me/919624047940"
   },
+  "djSongs": [
+    {
+      "title": "Energetic DJ Mix – Track 1",
+      "artist": "Demo Beat · Add your own MP3 URL in Admin Panel",
+      "url": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
+    },
+    {
+      "title": "Party Anthem – Track 2",
+      "artist": "Demo Beat · Add your own MP3 URL in Admin Panel",
+      "url": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3"
+    },
+    {
+      "title": "Bass Drop – Track 3",
+      "artist": "Demo Beat · Add your own MP3 URL in Admin Panel",
+      "url": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-16.mp3"
+    },
+    {
+      "title": "Club Night – Track 4",
+      "artist": "Demo Beat · Add your own MP3 URL in Admin Panel",
+      "url": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3"
+    },
+    {
+      "title": "Wedding Special – Track 5",
+      "artist": "Demo Beat · Add your own MP3 URL in Admin Panel",
+      "url": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-12.mp3"
+    }
+  ],
   "adminSettings": {
     "passcode": "radhe@123"
   }

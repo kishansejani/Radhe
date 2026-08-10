@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Phone, Mail, MapPin, Music, Zap, Flame, Star, Sparkles, Wind,
   PartyPopper, CheckCircle2, Users, HelpCircle, ArrowRight,
-  Image as ImageIcon, Send, Menu, X, Camera, Play, ChevronDown, ArrowUp,
+  Image as ImageIcon, Send, Menu, X, Camera, Play, Pause, ChevronDown, ArrowUp,
   Edit, Plus, Trash2, Save, Lock, Check, Upload, Download, Shield, Settings,
-  RotateCcw, Eye, LogOut
+  RotateCcw, Eye, LogOut, Volume2, VolumeX, Radio, Disc, Sliders, Sun, Moon
 } from 'lucide-react';
 import initialData from './data.json';
 
@@ -13,8 +13,8 @@ import initialData from './data.json';
 const IconMap = {
   Phone, Mail, MapPin, Music, Zap, Flame, Star, Sparkles, Wind,
   PartyPopper, CheckCircle2, Users, HelpCircle, ArrowRight,
-  ImageIcon, Send, Menu, X, Camera, Play, ChevronDown, ArrowUp,
-  Shield, Settings, Lock
+  ImageIcon, Send, Menu, X, Camera, Play, Pause, ChevronDown, ArrowUp,
+  Shield, Settings, Lock, Volume2, VolumeX, Radio, Disc, Sliders, Sun, Moon
 };
 
 const DynamicIcon = ({ name, size = 24, ...props }) => {
@@ -312,9 +312,145 @@ const App = () => {
   const [openFaqIndex, setOpenFaqIndex] = useState(0);
   const [showScrollTop, setShowScrollTop] = useState(false);
 
+  // Theme state (Dark / Light mode)
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem('radhe_theme') || 'dark';
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('radhe_theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+  };
+
   // Gallery tabs and Media lightbox state
   const [galleryTab, setGalleryTab] = useState('all');
   const [activeMedia, setActiveMedia] = useState(null);
+
+  // Interactive Sound & Stage FX Showcase state
+  const [soundMode, setSoundMode] = useState('bass');
+
+  // DJ Audio Player state
+  const audioRef = useRef(null);
+  const [djPlaying, setDjPlaying] = useState(false);
+  const [djCurrentIdx, setDjCurrentIdx] = useState(0);
+  const [djProgress, setDjProgress] = useState(0);
+  const [djCurrentTime, setDjCurrentTime] = useState('0:00');
+  const [djDuration, setDjDuration] = useState('0:00');
+  const [djError, setDjError] = useState(false);
+
+  const formatDjTime = (secs) => {
+    if (!secs || isNaN(secs)) return '0:00';
+    const m = Math.floor(secs / 60);
+    const s = Math.floor(secs % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  };
+
+  const djSongs = siteData.djSongs || [];
+
+  // Attach audio event listeners once on mount
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const onTimeUpdate = () => {
+      if (audio.duration && !isNaN(audio.duration)) {
+        setDjProgress((audio.currentTime / audio.duration) * 100);
+        setDjCurrentTime(formatDjTime(audio.currentTime));
+      }
+    };
+    const onLoadedMetadata = () => {
+      setDjDuration(formatDjTime(audio.duration));
+      setDjError(false);
+    };
+    const onEnded = () => {
+      setDjPlaying(false);
+      setDjProgress(0);
+      setDjCurrentTime('0:00');
+    };
+    const onError = () => {
+      setDjPlaying(false);
+      setDjError(true);
+    };
+    const onCanPlay = () => {
+      setDjError(false);
+    };
+
+    audio.addEventListener('timeupdate', onTimeUpdate);
+    audio.addEventListener('loadedmetadata', onLoadedMetadata);
+    audio.addEventListener('ended', onEnded);
+    audio.addEventListener('error', onError);
+    audio.addEventListener('canplay', onCanPlay);
+
+    return () => {
+      audio.removeEventListener('timeupdate', onTimeUpdate);
+      audio.removeEventListener('loadedmetadata', onLoadedMetadata);
+      audio.removeEventListener('ended', onEnded);
+      audio.removeEventListener('error', onError);
+      audio.removeEventListener('canplay', onCanPlay);
+    };
+  }, []); // Only once on mount
+
+  // When song index changes, update the src imperatively and reload
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio || djSongs.length === 0) return;
+    const song = djSongs[djCurrentIdx];
+    if (!song?.url) return;
+
+    const wasPlaying = !audio.paused;
+    audio.pause();
+    audio.src = song.url;
+    audio.currentTime = 0;
+    setDjProgress(0);
+    setDjCurrentTime('0:00');
+    setDjDuration('0:00');
+    setDjError(false);
+    audio.load();
+
+    if (wasPlaying) {
+      audio.play().then(() => {
+        setDjPlaying(true);
+      }).catch(() => {
+        setDjPlaying(false);
+      });
+    } else {
+      setDjPlaying(false);
+    }
+  }, [djCurrentIdx]); // Runs when song index changes
+
+  const handleDjPlayPause = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    // If no src yet, set the first song
+    if (!audio.src || audio.src === window.location.href) {
+      if (djSongs.length > 0 && djSongs[djCurrentIdx]?.url) {
+        audio.src = djSongs[djCurrentIdx].url;
+        audio.load();
+      }
+    }
+
+    if (djPlaying) {
+      audio.pause();
+      setDjPlaying(false);
+    } else {
+      audio.play().then(() => {
+        setDjPlaying(true);
+      }).catch((err) => {
+        console.error('DJ play error:', err);
+        setDjError(true);
+        setDjPlaying(false);
+      });
+    }
+  };
+
+  const handleDjSongChange = (idx) => {
+    setDjCurrentIdx(idx); // The useEffect above handles everything
+  };
 
   // Admin Portal states
   const [isAdminOpen, setIsAdminOpen] = useState(() => {
@@ -581,30 +717,42 @@ const App = () => {
             }} 
             className="admin-interactive" 
             style={{ 
-              background: 'none', border: 'none', color: '#fbbf24', cursor: 'pointer', fontSize: '0.9rem', 
-              fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', marginLeft: '12px',
-              padding: '0 6px', opacity: 0.85, transition: 'opacity 0.2s'
+              background: 'none', border: 'none', color: '#f97316', cursor: 'pointer', fontSize: '0.9rem', 
+              fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', marginLeft: '12px',
+              padding: '0 6px', opacity: 0.9, transition: 'opacity 0.2s'
             }}
             onMouseEnter={(e) => e.target.style.opacity = 1}
-            onMouseLeave={(e) => e.target.style.opacity = 0.85}
+            onMouseLeave={(e) => e.target.style.opacity = 0.9}
           >
-            <Lock size={12} /> Admin Portal
+            <Lock size={13} /> Admin Portal
           </button>
         </div>
 
-        {/* Desktop CTA */}
-        <a href={`tel:${siteData.contact.chintanPhoneRaw}`} className="btn-royal nav-cta">
-          <Phone size={16} /> Book Now
-        </a>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {/* Theme Mode Toggle Button */}
+          <button 
+            onClick={toggleTheme} 
+            className="theme-toggle-btn admin-interactive"
+            title={theme === 'dark' ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            aria-label="Toggle theme"
+          >
+            {theme === 'dark' ? <Sun size={19} style={{ color: '#fbbf24' }} /> : <Moon size={19} style={{ color: '#ea580c' }} />}
+          </button>
 
-        {/* Mobile hamburger */}
-        <button
-          className="hamburger"
-          onClick={() => setMenuOpen(o => !o)}
-          aria-label="Toggle menu"
-        >
-          {menuOpen ? <X size={26} /> : <Menu size={26} />}
-        </button>
+          {/* Desktop CTA */}
+          <a href={`tel:${siteData.contact.chintanPhoneRaw}`} className="btn-royal nav-cta">
+            <Phone size={16} /> Book Now
+          </a>
+
+          {/* Mobile hamburger */}
+          <button
+            className="hamburger"
+            onClick={() => setMenuOpen(o => !o)}
+            aria-label="Toggle menu"
+          >
+            {menuOpen ? <X size={26} /> : <Menu size={26} />}
+          </button>
+        </div>
       </nav>
 
       {/* Mobile Drawer */}
@@ -622,26 +770,41 @@ const App = () => {
                 {l.label}
               </a>
             ))}
-            <button 
-              onClick={() => {
-                setMenuOpen(false);
-                localStorage.removeItem('isAdminSessionActive');
-                setIsAdminOpen(false);
-                setIsPasscodePromptOpen(true);
-                setEnteredPasscode('');
-                setPasscodeError('');
-                window.history.pushState({}, '', '/admin');
-              }}
-              className="admin-interactive" 
-              style={{ 
-                background: 'rgba(251, 191, 36, 0.08)', border: '1px solid rgba(251, 191, 36, 0.3)', 
-                color: '#fbbf24', cursor: 'pointer', fontSize: '0.95rem', borderRadius: '8px',
-                fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', 
-                padding: '12px 20px', width: '100%', marginTop: '0.8rem'
-              }}
-            >
-              <Lock size={14} /> Admin Portal
-            </button>
+            
+            <div style={{ display: 'flex', gap: '10px', marginTop: '1rem' }}>
+              <button 
+                onClick={toggleTheme}
+                className="admin-interactive"
+                style={{ 
+                  flex: 1, background: 'rgba(249, 115, 22, 0.1)', border: '1px solid rgba(249, 115, 22, 0.3)', 
+                  color: 'var(--brand-orange)', borderRadius: '10px', fontWeight: 700, fontSize: '0.9rem',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px'
+                }}
+              >
+                {theme === 'dark' ? <><Sun size={16} /> Light Mode</> : <><Moon size={16} /> Dark Mode</>}
+              </button>
+              
+              <button 
+                onClick={() => {
+                  setMenuOpen(false);
+                  localStorage.removeItem('isAdminSessionActive');
+                  setIsAdminOpen(false);
+                  setIsPasscodePromptOpen(true);
+                  setEnteredPasscode('');
+                  setPasscodeError('');
+                  window.history.pushState({}, '', '/admin');
+                }}
+                className="admin-interactive" 
+                style={{ 
+                  flex: 1, background: 'rgba(234, 179, 8, 0.1)', border: '1px solid rgba(234, 179, 8, 0.3)', 
+                  color: '#eab308', borderRadius: '10px', fontWeight: 700, fontSize: '0.9rem',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px'
+                }}
+              >
+                <Lock size={14} /> Admin Portal
+              </button>
+            </div>
+
             <a href={`tel:${siteData.contact.chintanPhoneRaw}`} className="btn-royal" style={{ justifyContent: 'center', marginTop: '0.8rem' }}>
               <Phone size={16} /> Call Now
             </a>
@@ -671,9 +834,10 @@ const App = () => {
             initial={{ opacity: 0, scale: 0.85 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.1 }}
-            className="badge"
+            className="badge pulse-glow-badge"
+            style={{ background: 'rgba(249, 115, 22, 0.12)', color: 'var(--brand-orange)', borderColor: 'rgba(249, 115, 22, 0.4)' }}
           >
-            {siteData.hero.badge}
+            🪶 {siteData.hero.badge}
           </motion.div>
 
           <motion.h2
@@ -682,7 +846,7 @@ const App = () => {
             transition={{ delay: 0.25, type: 'spring', stiffness: 90 }}
             className="playfair hero-title"
           >
-            {siteData.hero.title} <span className="purple-gradient">{siteData.hero.titleGradient}</span>
+            {siteData.hero.title} <span className="radhe-logo-gradient">{siteData.hero.titleGradient}</span>
           </motion.h2>
 
           <motion.p
@@ -711,114 +875,384 @@ const App = () => {
         <div className="scroll-line" />
       </section>
 
-      {/* ─────────────── ABOUT ─────────────── */}
-      <section id="about" className="section-padding">
-        <div className="about-grid">
-          <div className="about-img-wrap">
-            <div className="about-img-frame">
+      {/* ─────────────── ABOUT (LAYOUT 1: ASYMMETRIC SPLIT) ─────────────── */}
+      <section id="about" className="section-padding relative overflow-hidden" style={{ background: 'var(--deep-bg)' }}>
+        <GlowingBlobs />
+        <div className="about-grid relative z-10">
+          <motion.div 
+            initial={{ opacity: 0, x: -40 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8 }}
+            className="about-img-wrap"
+          >
+            <motion.div 
+              whileHover={{ scale: 1.02, rotate: 0.5 }}
+              transition={{ duration: 0.4 }}
+              className="about-img-frame shimmer-card"
+              style={{ position: 'relative', overflow: 'hidden', border: '2px solid rgba(249, 115, 22, 0.3)', borderRadius: '32px' }}
+            >
               <img
                 src={siteData.about.image}
-                alt="Radhe DJ Truck"
+                alt="Radhe DJ Setup"
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 onError={(e) => { e.target.onerror = null; e.target.src = 'https://picsum.photos/seed/djevent/1200/800'; }}
               />
-            </div>
-            <div className="about-badge-float glass-card">
-              <h4 className="royal-gradient" style={{ fontSize: '2.6rem', fontWeight: '900', lineHeight: 1 }}>{siteData.about.experienceYears}</h4>
-              <p style={{ fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '3px', marginTop: '8px' }}>{siteData.about.experienceLabel}</p>
-            </div>
-          </div>
+              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(7,11,25,0.7) 0%, transparent 60%)' }} />
+            </motion.div>
+            
+            <motion.div 
+              initial={{ scale: 0.8, opacity: 0 }}
+              whileInView={{ scale: 1, opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.3, type: "spring" }}
+              className="about-badge-float glass-card pulse-glow-badge"
+              style={{ border: '1px solid rgba(234,179,8,0.5)', background: 'var(--card-bg)' }}
+            >
+              <h4 className="orange-gold-gradient" style={{ fontSize: '2.8rem', fontWeight: '900', lineHeight: 1 }}>{siteData.about.experienceYears}</h4>
+              <p style={{ fontSize: '0.72rem', color: 'var(--brand-gold)', textTransform: 'uppercase', letterSpacing: '3px', marginTop: '6px', fontWeight: 800 }}>{siteData.about.experienceLabel}</p>
+            </motion.div>
+          </motion.div>
 
-          <div>
-            <div className="badge">{siteData.about.badge}</div>
-            <h2 style={{ fontSize: 'clamp(2rem, 5vw, 3.2rem)', marginBottom: '1.5rem', lineHeight: 1.1 }}>
-              {siteData.about.title} <span className="royal-gradient">{siteData.about.titleGradient}</span>
+          <motion.div
+            initial={{ opacity: 0, x: 40 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8 }}
+          >
+            <div className="badge" style={{ background: 'rgba(249, 115, 22, 0.1)', color: 'var(--brand-orange)', borderColor: 'rgba(249, 115, 22, 0.3)' }}>
+              🪶 {siteData.about.badge}
+            </div>
+            <h2 style={{ fontSize: 'clamp(2rem, 5vw, 3.4rem)', marginBottom: '1.5rem', lineHeight: 1.15, fontWeight: 900 }}>
+              {siteData.about.title} <span className="radhe-logo-gradient">{siteData.about.titleGradient}</span>
             </h2>
-            <p style={{ color: '#94a3b8', fontSize: '1.05rem', marginBottom: '2rem', lineHeight: 2 }}>
+            <p style={{ color: 'var(--text-muted)', fontSize: '1.05rem', marginBottom: '2.2rem', lineHeight: 1.9 }}>
               {siteData.about.description}
             </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
               {siteData.about.keyPoints.map((item, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '14px 20px', background: 'rgba(139,92,246,0.05)', border: '1px solid rgba(139,92,246,0.12)', borderRadius: '12px' }}>
-                  <CheckCircle2 size={18} style={{ color: '#fbbf24', flexShrink: 0 }} />
-                  <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>{item}</span>
-                </div>
+                <motion.div 
+                  key={i}
+                  initial={{ opacity: 0, y: 15 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.1 }}
+                  whileHover={{ y: -4, borderColor: 'rgba(249, 115, 22, 0.4)' }}
+                  style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '14px', 
+                    padding: '14px 18px', 
+                    background: 'var(--card-bg)', 
+                    border: '1px solid var(--border-color)', 
+                    borderRadius: '16px',
+                    boxShadow: '0 4px 20px var(--shadow-color)',
+                    transition: 'all 0.3s ease'
+                  }}
+                >
+                  <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'rgba(249, 115, 22, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <CheckCircle2 size={18} style={{ color: 'var(--brand-orange)' }} />
+                  </div>
+                  <span style={{ fontWeight: 700, fontSize: '0.92rem', color: 'var(--text-main)' }}>{item}</span>
+                </motion.div>
               ))}
             </div>
-          </div>
+          </motion.div>
         </div>
       </section>
 
-      {/* ─────────────── STATS ─────────────── */}
-      <section className="section-padding" style={{ background: 'var(--alt-bg)', paddingTop: 0 }}>
+      {/* ─────────────── STATS (LAYOUT 2: FULL-WIDTH TICKER BAR) ─────────────── */}
+      <section className="section-padding relative" style={{ background: 'var(--alt-bg)', padding: '60px 8%' }}>
         <div className="stats-grid">
           {siteData.stats.map((stat, i) => (
             <motion.div
               key={i}
-              initial={{ opacity: 0, y: 30 }}
+              initial={{ opacity: 0, y: 35 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ delay: i * 0.15 }}
-              className="glass-card stat-card"
+              transition={{ delay: i * 0.12, duration: 0.6 }}
+              whileHover={{ y: -8, scale: 1.03 }}
+              className="glass-card stat-card shimmer-card"
+              style={{
+                border: '1px solid var(--border-color)',
+                background: 'var(--card-bg)',
+                position: 'relative'
+              }}
             >
-              <div className="stat-icon">
-                <DynamicIcon name={stat.iconName} size={32} />
+              <div className="stat-icon" style={{ 
+                width: '64px', height: '64px', margin: '0 auto 1.5rem', borderRadius: '20px', 
+                background: i % 2 === 0 ? 'rgba(249, 115, 22, 0.12)' : 'rgba(16, 185, 129, 0.12)',
+                border: i % 2 === 0 ? '1px solid rgba(249, 115, 22, 0.3)' : '1px solid rgba(16, 185, 129, 0.3)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 0 20px var(--shadow-color)'
+              }}>
+                <DynamicIcon name={stat.iconName} size={30} style={{ color: i % 2 === 0 ? 'var(--brand-orange)' : 'var(--brand-emerald)' }} />
               </div>
-              <h3 className="royal-gradient" style={{ fontSize: '2.5rem', fontWeight: 900, marginBottom: '0.5rem' }}>{stat.value}</h3>
-              <p style={{ color: '#94a3b8', fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '2px' }}>{stat.label}</p>
+              <h3 className="radhe-logo-gradient" style={{ fontSize: '2.8rem', fontWeight: 900, marginBottom: '0.4rem', letterSpacing: '-1px' }}>{stat.value}</h3>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '2.5px' }}>{stat.label}</p>
             </motion.div>
           ))}
         </div>
       </section>
 
-      {/* ─────────────── SERVICES ─────────────── */}
-      <section id="services" className="section-padding relative" style={{ background: '#070b1d' }}>
+      {/* ─────────────── SERVICES (LAYOUT 3: DYNAMIC CARDS GRID) ─────────────── */}
+      <section id="services" className="section-padding relative" style={{ background: 'var(--section-bg-3)' }}>
         <GlowingBlobs />
-        <div className="text-center relative z-10" style={{ marginBottom: '4rem' }}>
-          <div className="badge">Specialties</div>
-          <h2 style={{ fontSize: 'clamp(1.8rem, 4vw, 3.2rem)', marginBottom: '1.2rem' }}>
-            Our Signature <span className="royal-gradient">Services</span>
+        <div className="text-center relative z-10" style={{ marginBottom: '4.5rem' }}>
+          <div className="badge" style={{ background: 'rgba(234, 179, 8, 0.1)', color: 'var(--brand-gold)', borderColor: 'rgba(234, 179, 8, 0.3)' }}>
+            🪶 Royal Capabilities
+          </div>
+          <h2 style={{ fontSize: 'clamp(2rem, 5vw, 3.4rem)', marginBottom: '1.2rem', fontWeight: 900 }}>
+            Our Royal <span className="radhe-logo-gradient">Services &amp; Setup</span>
           </h2>
-          <div style={{ width: '70px', height: '3px', background: 'linear-gradient(90deg,#8b5cf6,#fbbf24)', margin: '0 auto', borderRadius: '100px' }} />
+          <div style={{ width: '90px', height: '4px', background: 'linear-gradient(90deg, #f97316, #eab308, #10b981)', margin: '0 auto', borderRadius: '100px' }} />
         </div>
 
         <div className="process-grid">
           {siteData.services.map((s, i) => (
             <motion.div
               key={i}
-              initial={{ opacity: 0, y: 30 }}
+              initial={{ opacity: 0, y: 40 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ delay: i * 0.1 }}
-              className="process-card dynamic-card"
+              transition={{ delay: i * 0.1, duration: 0.5 }}
+              whileHover={{ y: -12, scale: 1.02 }}
+              className="process-card dynamic-card shimmer-card"
               style={{ 
-                '--accent-color': s.color,
-                '--accent-rgb': hexToRgb(s.color)
+                '--accent-color': s.color || (i % 3 === 0 ? '#f97316' : i % 3 === 1 ? '#eab308' : '#10b981'),
+                '--accent-rgb': hexToRgb(s.color || (i % 3 === 0 ? '#f97316' : i % 3 === 1 ? '#eab308' : '#10b981')),
+                border: '1px solid rgba(var(--accent-rgb), 0.3)',
+                background: 'var(--card-bg)',
+                boxShadow: '0 15px 35px var(--shadow-color)'
               }}
             >
               <div className="process-number-badge">{i + 1}</div>
               <div className="process-bg-number">{String(i + 1).padStart(2, '0')}</div>
               <div className="process-icon-box" style={{ position: 'relative', zIndex: 2 }}>
-                <DynamicIcon name={s.iconName} size={36} />
+                <DynamicIcon name={s.iconName} size={38} />
               </div>
-              <h3 className="process-title" style={{ position: 'relative', zIndex: 2 }}>{s.title}</h3>
-              <p className="process-desc">{s.desc}</p>
+              <h3 className="process-title" style={{ position: 'relative', zIndex: 2, color: 'var(--text-main)' }}>{s.title}</h3>
+              <p className="process-desc" style={{ color: 'var(--text-muted)' }}>{s.desc}</p>
             </motion.div>
           ))}
         </div>
       </section>
 
-      {/* ─────────────── GALLERY ─────────────── */}
-      <section id="gallery" className="section-padding">
-        <div className="text-center" style={{ marginBottom: '3rem' }}>
-          <div className="badge">Moments</div>
-          <h2 style={{ fontSize: 'clamp(1.8rem, 4vw, 3.2rem)' }}>
-            Event <span className="royal-gradient">Gallery</span>
+      {/* ─────────────── INTERACTIVE DJ MIXER WITH AUDIO PLAYER ─────────────── */}
+      <section id="experience" className="section-padding relative overflow-hidden" style={{ background: 'linear-gradient(180deg, var(--section-bg-3) 0%, var(--deep-bg) 100%)' }}>
+        <GlowingBlobs />
+        {/* Hidden HTML5 audio element */}
+          <audio
+            ref={audioRef}
+            preload="none"
+            style={{ display: 'none' }}
+          />
+
+        <div className="max-w-4xl mx-auto relative z-10">
+          <div className="text-center" style={{ marginBottom: '3.5rem' }}>
+            <div className="badge pulse-glow-badge" style={{ background: 'rgba(249, 115, 22, 0.12)', color: 'var(--brand-orange)', borderColor: 'rgba(249, 115, 22, 0.4)' }}>
+              ⚡ Interactive DJ Mixer
+            </div>
+            <h2 style={{ fontSize: 'clamp(1.8rem, 4vw, 3.2rem)', fontWeight: 900, marginBottom: '1rem' }}>
+              Feel The <span className="radhe-logo-gradient">Sound Beat &amp; Aura</span>
+            </h2>
+            <p style={{ color: 'var(--text-muted)', fontSize: '1rem', maxWidth: '600px', margin: '0 auto' }}>
+              Pick a song, hit play, and feel the live DJ FX visualizer react to the beat!
+            </p>
+          </div>
+
+          <div
+            className="glass-card shimmer-card"
+            style={{
+              padding: '40px',
+              background: 'var(--card-bg)',
+              border: '1px solid var(--brand-orange)',
+              boxShadow: '0 25px 60px var(--shadow-color), 0 0 30px rgba(249, 115, 22, 0.15)'
+            }}
+          >
+            {/* Mode selection chips */}
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '2.5rem' }}>
+              {[
+                { id: 'bass', label: '🔊 20,000W Bass Drop', color: '#f97316' },
+                { id: 'laser', label: '⚡ 3D Laser Spectacle', color: '#eab308' },
+                { id: 'pyro', label: '🎆 Cold Pyro Sparklers', color: '#10b981' },
+                { id: 'fog', label: '💨 Heavy Cloud Fog FX', color: '#f97316' },
+              ].map((m) => (
+                <button
+                  key={m.id}
+                  onClick={() => setSoundMode(m.id)}
+                  className={`sound-mode-chip ${soundMode === m.id ? 'active' : ''}`}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Stage Aura Visualizer Box */}
+            <div style={{
+              height: '180px',
+              borderRadius: '24px',
+              background: soundMode === 'bass' ? 'radial-gradient(ellipse at center, rgba(249, 115, 22, 0.25) 0%, rgba(7, 11, 24, 0.95) 70%)'
+                : soundMode === 'laser' ? 'radial-gradient(ellipse at center, rgba(234, 179, 8, 0.25) 0%, rgba(7, 11, 24, 0.95) 70%)'
+                : soundMode === 'pyro' ? 'radial-gradient(ellipse at center, rgba(16, 185, 129, 0.25) 0%, rgba(7, 11, 24, 0.95) 70%)'
+                : 'radial-gradient(ellipse at center, rgba(249, 115, 22, 0.25) 0%, rgba(7, 11, 24, 0.95) 70%)',
+              border: '1px solid var(--border-color)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              position: 'relative',
+              overflow: 'hidden',
+              marginBottom: '20px',
+              transition: 'all 0.5s ease'
+            }}>
+              {/* Status pill */}
+              <div style={{ position: 'absolute', top: '16px', left: '20px', display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(0,0,0,0.6)', border: '1px solid var(--border-color)', padding: '6px 14px', borderRadius: '100px', fontSize: '0.72rem', fontWeight: 800 }}>
+                <span className={djPlaying ? 'status-dot-active' : ''} style={!djPlaying ? { width: 8, height: 8, borderRadius: '50%', background: '#64748b', display: 'inline-block' } : {}} />
+                <span style={{ color: '#fff', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                  {djPlaying ? `${soundMode.toUpperCase()} STAGE MIX LIVE` : 'PRESS PLAY TO START'}
+                </span>
+              </div>
+
+              {/* Equalizer Frequency Bars – animate when playing */}
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: '6px', height: '80px', paddingBottom: '8px' }}>
+                {[...Array(24)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="eq-bar"
+                    style={{
+                      height: `${Math.floor(Math.random() * 70) + 20}%`,
+                      animationDuration: djPlaying ? `${0.4 + (i % 5) * 0.18}s` : '0s',
+                      animationPlayState: djPlaying ? 'running' : 'paused',
+                      width: '3px',
+                      background: soundMode === 'bass' ? 'linear-gradient(to top, #f97316, #eab308)'
+                        : soundMode === 'laser' ? 'linear-gradient(to top, #eab308, #10b981)'
+                        : soundMode === 'pyro' ? 'linear-gradient(to top, #10b981, #f97316)'
+                        : 'linear-gradient(to top, #f97316, #eab308)'
+                    }}
+                  />
+                ))}
+              </div>
+
+              <p style={{ color: '#e2e8f0', fontSize: '0.82rem', fontWeight: 800, marginTop: '8px', letterSpacing: '1px' }}>
+                {soundMode === 'bass' && '🔊 High-Punch JBL Line Array Subwoofers & Master Mix'}
+                {soundMode === 'laser' && '⚡ Multi-Color DMX Laser Beams & Intelligent Scanners'}
+                {soundMode === 'pyro' && '🎆 Non-Hazardous Cold Flame Pyro Spark Fountain Stage FX'}
+                {soundMode === 'fog' && '💨 Dense Low-Lying Dry Ice Cloud Fog Machine'}
+              </p>
+            </div>
+
+            {/* ── Real Audio Player ── */}
+            {djSongs.length > 0 && (
+              <div className="dj-audio-player">
+                {/* Play/Pause button */}
+                <button className="dj-play-btn" onClick={handleDjPlayPause}>
+                  {djPlaying ? <Pause size={20} /> : <Play size={20} />}
+                </button>
+
+                {/* Track Info */}
+                <div className="dj-track-info">
+                  <div className="dj-track-name">{djSongs[djCurrentIdx]?.title || 'Select a song'}</div>
+                  {djError
+                    ? <div className="dj-track-sub" style={{ color: '#f43f5e' }}>⚠️ URL error – please add a valid MP3 link in Admin panel</div>
+                    : <div className="dj-track-sub">{djSongs[djCurrentIdx]?.artist || ''}</div>
+                  }
+                </div>
+
+                {/* Progress */}
+                <div className="dj-progress-wrap">
+                  <div
+                    className="dj-progress-bar"
+                    onClick={(e) => {
+                      if (!audioRef.current || !audioRef.current.duration) return;
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      const ratio = (e.clientX - rect.left) / rect.width;
+                      audioRef.current.currentTime = ratio * audioRef.current.duration;
+                    }}
+                  >
+                    <div className="dj-progress-fill" style={{ width: `${djProgress}%` }} />
+                  </div>
+                  <div className="dj-time-row">
+                    <span>{djCurrentTime}</span>
+                    <span>{djDuration}</span>
+                  </div>
+                </div>
+
+                {/* Song selector */}
+                <select
+                  className="dj-song-select"
+                  value={djCurrentIdx}
+                  onChange={(e) => handleDjSongChange(Number(e.target.value))}
+                >
+                  {djSongs.map((song, idx) => (
+                    <option key={idx} value={idx}>🎵 {song.title}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
+
+      {/* ─────────────── HIGH-TECH SPECS MATRIX (LAYOUT 5: TECH SPEC MATRIX) ─────────────── */}
+      <section id="why-us" className="section-padding relative" style={{ background: 'var(--alt-bg)' }}>
+        <div className="text-center relative z-10" style={{ marginBottom: '4rem' }}>
+          <div className="badge" style={{ background: 'rgba(16, 185, 129, 0.1)', color: 'var(--brand-emerald)', borderColor: 'rgba(16, 185, 129, 0.3)' }}>
+            ⚡ Why Radhe DJ
+          </div>
+          <h2 style={{ fontSize: 'clamp(2rem, 5vw, 3.4rem)', fontWeight: 900, marginBottom: '1.2rem' }}>
+            Built For <span className="radhe-logo-gradient">Unmatched Power</span>
           </h2>
         </div>
 
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '24px', maxWidth: '1200px', margin: '0 auto' }}>
+          {[
+            { title: '20,000W RMS Sound', desc: 'JBL & RCF Professional Line Array Subwoofers for maximum bass impact.', icon: Zap, color: 'var(--brand-orange)' },
+            { title: 'Cold Pyro Sparklers', desc: 'Safe indoor & outdoor non-hazardous fireworks for grand entrances.', icon: Flame, color: 'var(--brand-gold)' },
+            { title: '3D Laser Lighting', desc: 'DMX computer-controlled laser beams & moving head light shows.', icon: Sparkles, color: 'var(--brand-emerald)' },
+            { title: 'Power Generator Backup', desc: '100% uninterrupted power supply with silent backup generators.', icon: Shield, color: 'var(--brand-orange)' }
+          ].map((item, idx) => {
+            const IconComponent = item.icon;
+            return (
+              <motion.div
+                key={idx}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: idx * 0.1 }}
+                whileHover={{ y: -8 }}
+                className="glass-card shimmer-card"
+                style={{ background: 'var(--card-bg)', border: '1px solid var(--border-color)', padding: '36px' }}
+              >
+                <div style={{ width: '56px', height: '56px', borderRadius: '16px', background: 'rgba(249, 115, 22, 0.12)', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.4rem' }}>
+                  <IconComponent size={28} style={{ color: item.color }} />
+                </div>
+                <h4 style={{ fontSize: '1.25rem', fontWeight: 900, marginBottom: '8px', color: 'var(--text-main)' }}>{item.title}</h4>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: 1.7 }}>{item.desc}</p>
+              </motion.div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* ─────────────── GALLERY (LAYOUT 6: MASONRY MEDIA GRID) ─────────────── */}
+      <section id="gallery" className="section-padding relative" style={{ background: 'var(--deep-bg)' }}>
+        <div className="text-center" style={{ marginBottom: '3.5rem' }}>
+          <div className="badge" style={{ background: 'rgba(249, 115, 22, 0.1)', color: 'var(--brand-orange)', borderColor: 'rgba(249, 115, 22, 0.3)' }}>
+            🪶 Real Gujarat Events
+          </div>
+          <h2 style={{ fontSize: 'clamp(2rem, 5vw, 3.4rem)', fontWeight: 900, marginBottom: '0.8rem' }}>
+            Event <span className="radhe-logo-gradient">Gallery</span>
+          </h2>
+          <p style={{ color: 'var(--text-muted)', fontSize: '1rem', maxWidth: '550px', margin: '0 auto' }}>
+            Explore photos &amp; high-energy video clips from Radhe DJ events across Gujarat!
+          </p>
+        </div>
+
         {/* Gallery Filter Tabs */}
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', marginBottom: '3rem', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', marginBottom: '3.5rem', flexWrap: 'wrap' }}>
           {[
             { id: 'all', label: 'All Moments', icon: Sparkles },
             { id: 'photos', label: 'Photos', icon: ImageIcon },
@@ -834,20 +1268,20 @@ const App = () => {
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px',
-                  padding: '10px 24px',
+                  gap: '10px',
+                  padding: '12px 28px',
                   borderRadius: '100px',
-                  fontSize: '0.85rem',
-                  fontWeight: 700,
+                  fontSize: '0.88rem',
+                  fontWeight: 800,
                   cursor: 'pointer',
                   transition: 'all 0.3s',
-                  border: isActive ? '1px solid rgba(251, 191, 36, 0.4)' : '1px solid rgba(255,255,255,0.06)',
-                  background: isActive ? 'rgba(251, 191, 36, 0.08)' : 'rgba(255,255,255,0.02)',
-                  color: isActive ? '#fbbf24' : '#94a3b8',
-                  boxShadow: isActive ? '0 0 15px rgba(251, 191, 36, 0.15)' : 'none'
+                  border: isActive ? '1px solid var(--brand-orange)' : '1px solid var(--border-color)',
+                  background: isActive ? 'linear-gradient(135deg, rgba(249, 115, 22, 0.18), rgba(234, 179, 8, 0.2))' : 'var(--card-bg)',
+                  color: isActive ? 'var(--brand-orange)' : 'var(--text-muted)',
+                  boxShadow: isActive ? '0 0 25px rgba(249, 115, 22, 0.25)' : 'none'
                 }}
               >
-                <TabIcon size={14} /> {tab.label}
+                <TabIcon size={16} /> {tab.label}
               </button>
             );
           })}
@@ -874,10 +1308,10 @@ const App = () => {
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.9 }}
-                  transition={{ duration: 0.3 }}
-                  className="gallery-card"
+                  transition={{ duration: 0.35 }}
+                  className="gallery-card shimmer-card"
                   onClick={() => setActiveMedia(media)}
-                  style={{ cursor: 'pointer' }}
+                  style={{ cursor: 'pointer', borderRadius: '24px', border: '1px solid var(--border-color)' }}
                 >
                   <img
                     src={displayUrl}
@@ -887,30 +1321,30 @@ const App = () => {
                   
                   {/* Play icon badge for video cards */}
                   {isVideo && (
-                    <div style={{ position: 'absolute', top: '15px', right: '15px', background: 'rgba(2, 6, 23, 0.75)', border: '1px solid rgba(251, 191, 36, 0.3)', borderRadius: '100px', display: 'flex', alignItems: 'center', gap: '6px', padding: '5px 12px', zIndex: 10 }}>
-                      <Play size={10} style={{ fill: '#fbbf24', color: '#fbbf24' }} />
-                      <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#fbbf24', textTransform: 'uppercase', letterSpacing: '1px' }}>Video</span>
+                    <div style={{ position: 'absolute', top: '15px', right: '15px', background: 'rgba(0,0,0,0.85)', border: '1px solid var(--brand-gold)', borderRadius: '100px', display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px', zIndex: 10, boxShadow: '0 4px 15px rgba(0,0,0,0.5)' }}>
+                      <Play size={12} style={{ fill: 'var(--brand-gold)', color: 'var(--brand-gold)' }} />
+                      <span style={{ fontSize: '0.68rem', fontWeight: 900, color: 'var(--brand-gold)', textTransform: 'uppercase', letterSpacing: '1.5px' }}>Video Highlight</span>
                     </div>
                   )}
                   
                   <div className="gallery-overlay">
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                       <div className="play-btn-circle" style={{ 
-                        width: isVideo ? '60px' : '50px', 
-                        height: isVideo ? '60px' : '50px', 
+                        width: isVideo ? '64px' : '52px', 
+                        height: isVideo ? '64px' : '52px', 
                         borderRadius: '50%', 
-                        background: isVideo ? 'rgba(251, 191, 36, 0.95)' : 'rgba(139, 92, 246, 0.9)', 
+                        background: isVideo ? 'linear-gradient(135deg, #f97316, #eab308)' : 'linear-gradient(135deg, #10b981, #eab308)', 
                         display: 'flex', 
                         alignItems: 'center', 
                         justifyContent: 'center', 
                         marginBottom: '12px',
-                        boxShadow: '0 0 20px rgba(0,0,0,0.3)',
-                        color: isVideo ? '#000' : '#fff',
+                        boxShadow: '0 0 25px var(--shadow-color)',
+                        color: '#000',
                         transition: 'all 0.3s'
                       }}>
-                        {isVideo ? <Play size={24} style={{ fill: '#000', marginLeft: '3px' }} /> : <ImageIcon size={22} />}
+                        {isVideo ? <Play size={26} style={{ fill: '#000', marginLeft: '3px' }} /> : <ImageIcon size={24} />}
                       </div>
-                      <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#fff', textAlign: 'center', padding: '0 15px' }}>{media.title}</h4>
+                      <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#fff', textAlign: 'center', padding: '0 15px' }}>{media.title}</h4>
                     </div>
                   </div>
                 </motion.div>
@@ -920,51 +1354,80 @@ const App = () => {
         </motion.div>
       </section>
 
-      {/* ─────────────── PACKAGES ─────────────── */}
-      <section className="section-padding" style={{ background: '#070b1d' }}>
-        <div className="text-center" style={{ marginBottom: '4rem' }}>
-          <div className="badge">Booking Options</div>
-          <h2 style={{ fontSize: 'clamp(1.8rem, 4vw, 3.2rem)', marginBottom: '1.2rem' }}>
-            Popular <span className="royal-gradient">Packages</span>
+      {/* ─────────────── PACKAGES (LAYOUT 7: TIERED PRICING TABLE) ─────────────── */}
+      <section id="packages" className="section-padding relative" style={{ background: 'var(--alt-bg)' }}>
+        <GlowingBlobs />
+        <div className="text-center relative z-10" style={{ marginBottom: '4.5rem' }}>
+          <div className="badge" style={{ background: 'rgba(234, 179, 8, 0.1)', color: 'var(--brand-gold)', borderColor: 'rgba(234, 179, 8, 0.3)' }}>
+            🪶 Booking Packages
+          </div>
+          <h2 style={{ fontSize: 'clamp(2rem, 5vw, 3.4rem)', fontWeight: 900, marginBottom: '1.2rem' }}>
+            Event <span className="radhe-logo-gradient">Setups &amp; Pricing</span>
           </h2>
+          <p style={{ color: 'var(--text-muted)', fontSize: '1rem', maxWidth: '580px', margin: '0 auto' }}>
+            Select your preferred setup package. Custom sound &amp; pyro configurations available on request!
+          </p>
         </div>
 
-        <div className="packages-grid">
+        <div className="packages-grid relative z-10">
           {siteData.packages.map((pkg, i) => (
-            <div key={i} className={`glass-card package-card ${pkg.featured ? 'featured' : ''}`} style={{ display: 'flex', flexDirection: 'column' }}>
+            <motion.div 
+              key={i} 
+              initial={{ opacity: 0, y: 35 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: i * 0.15 }}
+              whileHover={{ y: -10 }}
+              className={`glass-card package-card shimmer-card ${pkg.featured ? 'featured' : ''}`} 
+              style={{ 
+                display: 'flex', 
+                flexDirection: 'column',
+                background: 'var(--card-bg)',
+                border: pkg.featured ? '2px solid var(--brand-orange)' : '1px solid var(--border-color)',
+                boxShadow: pkg.featured ? '0 0 35px rgba(249, 115, 22, 0.2)' : '0 15px 35px var(--shadow-color)'
+              }}
+            >
               {pkg.featured && (
-                <span style={{ background: 'linear-gradient(135deg,#fbbf24,#d97706)', color: '#000', fontSize: '0.62rem', fontWeight: 900, letterSpacing: '3px', textTransform: 'uppercase', padding: '5px 14px', borderRadius: '100px', display: 'inline-block', marginBottom: '1.2rem', alignSelf: 'flex-start' }}>
-                  ⭐ Most Popular
+                <span className="pulse-glow-badge" style={{ background: 'linear-gradient(135deg, #f97316, #eab308)', color: '#000', fontSize: '0.65rem', fontWeight: 900, letterSpacing: '3px', textTransform: 'uppercase', padding: '6px 16px', borderRadius: '100px', display: 'inline-block', marginBottom: '1.2rem', alignSelf: 'flex-start' }}>
+                  ⭐ Royal Gold Featured Setup
                 </span>
               )}
-              <h4 style={{ fontSize: '1.35rem', fontWeight: 800, marginBottom: '4px', color: pkg.featured ? '#fbbf24' : '#fff' }}>{pkg.name}</h4>
-              <p style={{ color: '#94a3b8', fontSize: '0.78rem', marginBottom: '1.8rem', textTransform: 'uppercase', letterSpacing: '2px' }}>{pkg.level}</p>
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '2rem' }}>
+              <h4 style={{ fontSize: '1.5rem', fontWeight: 900, marginBottom: '4px', color: pkg.featured ? 'var(--brand-orange)' : 'var(--text-main)' }}>{pkg.name}</h4>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.78rem', marginBottom: '1.8rem', textTransform: 'uppercase', letterSpacing: '2.5px', fontWeight: 800 }}>{pkg.level}</p>
+              
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '2.2rem' }}>
                 {pkg.features.map((f, j) => (
-                  <div key={j} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.9rem', color: '#cbd5e1' }}>
-                    <CheckCircle2 size={15} style={{ color: '#fbbf24', flexShrink: 0 }} />
-                    <span>{f}</span>
+                  <div key={j} style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '0.92rem', color: 'var(--text-main)' }}>
+                    <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: 'rgba(249, 115, 22, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <CheckCircle2 size={14} style={{ color: 'var(--brand-orange)' }} />
+                    </div>
+                    <span style={{ fontWeight: 600 }}>{f}</span>
                   </div>
                 ))}
               </div>
+              
               <a
-                href={`tel:${siteData.contact.chintanPhoneRaw}`}
+                href={`https://wa.me/${siteData.contact.whatsappRaw || '919428441400'}?text=${encodeURIComponent(`Hello Radhe DJ, I want to inquire about the ${pkg.name} package.`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="btn-royal"
-                style={{ justifyContent: 'center', fontSize: '0.78rem', padding: '14px 16px' }}
+                style={{ justifyContent: 'center', fontSize: '0.82rem', padding: '16px 18px', width: '100%' }}
               >
-                <Phone size={15} /> Book This Package
+                <Phone size={16} /> Book Package via WhatsApp
               </a>
-            </div>
+            </motion.div>
           ))}
         </div>
       </section>
 
-      {/* ─────────────── TESTIMONIALS ─────────────── */}
-      <section className="section-padding">
+      {/* ─────────────── TESTIMONIALS (LAYOUT 8: REVIEW CARDS) ─────────────── */}
+      <section id="testimonials" className="section-padding relative" style={{ background: 'var(--deep-bg)' }}>
         <div className="text-center" style={{ marginBottom: '4rem' }}>
-          <div className="badge">Testimonials</div>
-          <h2 style={{ fontSize: 'clamp(1.8rem, 4vw, 3.2rem)' }}>
-            What Our <span className="royal-gradient">Clients Say</span>
+          <div className="badge" style={{ background: 'rgba(16, 185, 129, 0.1)', color: 'var(--brand-emerald)', borderColor: 'rgba(16, 185, 129, 0.3)' }}>
+            🪶 Client Trust
+          </div>
+          <h2 style={{ fontSize: 'clamp(2rem, 5vw, 3.4rem)', fontWeight: 900 }}>
+            What Our <span className="radhe-logo-gradient">Clients Say</span>
           </h2>
         </div>
 
@@ -977,16 +1440,33 @@ const App = () => {
             {siteData.testimonials.map((t, i) => (
               <motion.div
                 key={i}
-                whileHover={{ y: -10 }}
-                className="glass-card testimonial-card"
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.15 }}
+                whileHover={{ y: -10, borderColor: 'rgba(249, 115, 22, 0.4)' }}
+                className="glass-card testimonial-card shimmer-card"
+                style={{ background: 'var(--card-bg)', border: '1px solid var(--border-color)', padding: '36px' }}
               >
-                <div style={{ display: 'flex', gap: '4px', marginBottom: '1.2rem' }}>
-                  {[...Array(5)].map((_, idx) => <Star key={idx} size={16} fill="#fbbf24" color="#fbbf24" />)}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.2rem' }}>
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    {[...Array(5)].map((_, idx) => <Star key={idx} size={18} fill="#eab308" color="#eab308" />)}
+                  </div>
+                  <span style={{ fontSize: '0.68rem', fontWeight: 900, background: 'rgba(16, 185, 129, 0.15)', color: 'var(--brand-emerald)', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '4px 10px', borderRadius: '100px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                    Verified Gujarat Event
+                  </span>
                 </div>
-                <p style={{ fontStyle: 'italic', color: '#cbd5e1', marginBottom: '2rem', lineHeight: 1.8 }}>"{t.text}"</p>
-                <div>
-                  <h4 style={{ fontWeight: 800, color: '#fff' }}>{t.name}</h4>
-                  <p style={{ color: '#8b5cf6', fontSize: '0.8rem', fontWeight: 700 }}>{t.role}</p>
+                
+                <p style={{ fontStyle: 'italic', color: 'var(--text-muted)', marginBottom: '2rem', lineHeight: 1.85, fontSize: '0.96rem' }}>"{t.text}"</p>
+                
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                  <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'linear-gradient(135deg, #f97316, #eab308)', color: '#000', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.05rem' }}>
+                    {t.name ? t.name.charAt(0) : 'C'}
+                  </div>
+                  <div>
+                    <h4 style={{ fontWeight: 800, color: 'var(--text-main)', fontSize: '1.05rem' }}>{t.name}</h4>
+                    <p style={{ color: 'var(--brand-orange)', fontSize: '0.8rem', fontWeight: 700 }}>{t.role}</p>
+                  </div>
                 </div>
               </motion.div>
             ))}
@@ -994,34 +1474,50 @@ const App = () => {
         )}
       </section>
 
-      {/* ─────────────── FAQ ─────────────── */}
-      <section className="section-padding">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center" style={{ marginBottom: '3.5rem' }}>
-            <div className="badge">FAQ</div>
-            <h2 style={{ fontSize: 'clamp(1.8rem, 4vw, 2.8rem)', marginBottom: '1rem' }}>
-              Common <span className="royal-gradient">Inquiries</span>
+      {/* ─────────────── FAQ (LAYOUT 9: ACCORDION LIST) ─────────────── */}
+      <section className="section-padding relative" style={{ background: 'var(--alt-bg)' }}>
+        <GlowingBlobs />
+        <div className="max-w-4xl mx-auto relative z-10">
+          <div className="text-center" style={{ marginBottom: '4rem' }}>
+            <div className="badge" style={{ background: 'rgba(249, 115, 22, 0.1)', color: 'var(--brand-orange)', borderColor: 'rgba(249, 115, 22, 0.3)' }}>
+              🪶 Instant Answers
+            </div>
+            <h2 style={{ fontSize: 'clamp(2rem, 5vw, 3.2rem)', fontWeight: 900, marginBottom: '1rem' }}>
+              Frequently Asked <span className="radhe-logo-gradient">Questions</span>
             </h2>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.4rem' }}>
             {siteData.faqs.map((faq, i) => {
               const isOpen = openFaqIndex === i;
               return (
-                <div
+                <motion.div
                   key={i}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.08 }}
                   className={`glass-card faq-item ${isOpen ? 'active' : ''}`}
-                  style={{ padding: '0', cursor: 'pointer' }}
+                  style={{ 
+                    padding: '0', 
+                    cursor: 'pointer', 
+                    background: 'var(--card-bg)',
+                    border: isOpen ? '1px solid var(--brand-orange)' : '1px solid var(--border-color)',
+                    boxShadow: isOpen ? '0 0 25px rgba(249, 115, 22, 0.18)' : 'none'
+                  }}
                   onClick={() => setOpenFaqIndex(isOpen ? -1 : i)}
                 >
                   <div style={{ padding: '24px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div style={{ display: 'flex', gap: '18px', alignItems: 'center' }}>
-                      <HelpCircle style={{ color: isOpen ? '#fbbf24' : '#64748b', transition: 'color 0.3s' }} size={24} />
-                      <h4 style={{ fontSize: '1.1rem', fontWeight: 700, color: isOpen ? '#fff' : '#cbd5e1' }}>{faq.q}</h4>
+                      <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: isOpen ? 'rgba(249, 115, 22, 0.15)' : 'rgba(120, 120, 120, 0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <HelpCircle style={{ color: isOpen ? 'var(--brand-orange)' : 'var(--text-muted)', transition: 'color 0.3s' }} size={20} />
+                      </div>
+                      <h4 style={{ fontSize: '1.1rem', fontWeight: 700, color: isOpen ? 'var(--text-main)' : 'var(--text-muted)' }}>{faq.q}</h4>
                     </div>
                     <motion.div
                       animate={{ rotate: isOpen ? 180 : 0 }}
                       transition={{ duration: 0.3 }}
-                      style={{ color: isOpen ? '#fbbf24' : '#64748b' }}
+                      style={{ color: isOpen ? 'var(--brand-orange)' : 'var(--text-muted)' }}
                     >
                       <ChevronDown size={22} />
                     </motion.div>
@@ -1036,107 +1532,129 @@ const App = () => {
                         transition={{ duration: 0.3, ease: 'easeInOut' }}
                         style={{ overflow: 'hidden' }}
                       >
-                        <div style={{ padding: '0 32px 32px 74px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                          <p style={{ color: '#94a3b8', lineHeight: 1.8, fontSize: '0.95rem' }}>{faq.a}</p>
+                        <div style={{ padding: '0 32px 32px 74px', borderTop: '1px solid var(--border-color)' }}>
+                          <p style={{ color: 'var(--text-muted)', lineHeight: 1.85, fontSize: '0.98rem' }}>{faq.a}</p>
                         </div>
                       </motion.div>
                     )}
                   </AnimatePresence>
-                </div>
+                </motion.div>
               );
             })}
           </div>
         </div>
       </section>
 
-      {/* ─────────────── CONTACT ─────────────── */}
-      <section id="contact" className="section-padding" style={{ background: '#070b1d' }}>
+      {/* ─────────────── CONTACT (LAYOUT 10: SPLIT CONTACT & FORM) ─────────────── */}
+      <section id="contact" className="section-padding relative" style={{ background: 'var(--deep-bg)' }}>
         <div className="contact-grid">
           {/* Left info */}
-          <div>
-            <div className="badge">Get In Touch</div>
-            <h2 style={{ fontSize: 'clamp(1.8rem, 4vw, 3rem)', marginBottom: '1.5rem', lineHeight: 1.1 }}>
-              Let's Plan Your <span className="royal-gradient">Big Day</span>
+          <motion.div
+            initial={{ opacity: 0, x: -30 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.7 }}
+          >
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '6px 16px', borderRadius: '100px', fontSize: '0.72rem', fontWeight: 800, color: 'var(--brand-emerald)', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '1.5rem' }}>
+              <span className="status-dot-active" /> Booking Open for 2026 Season
+            </div>
+            
+            <h2 style={{ fontSize: 'clamp(2rem, 5vw, 3.2rem)', marginBottom: '1.5rem', lineHeight: 1.15, fontWeight: 900 }}>
+              Let's Plan Your <span className="radhe-logo-gradient">Grand Celebration</span>
             </h2>
-            <p style={{ color: '#94a3b8', fontSize: '1.05rem', marginBottom: '3rem', lineHeight: 1.8 }}>
-              Ready to book or have questions? Contact us directly or fill the form — our team replies quickly!
+            <p style={{ color: 'var(--text-muted)', fontSize: '1.05rem', marginBottom: '3rem', lineHeight: 1.9 }}>
+              Have an upcoming Wedding, Garba, Sangeet, or Party? Contact Chintan Patel or Mehul Patel directly!
             </p>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
               {/* Address */}
-              <div className="contact-info-item">
-                <div className="contact-icon" style={{ background: 'rgba(59,130,246,0.1)', color: '#3b82f6' }}>
+              <div className="contact-info-item shimmer-card" style={{ background: 'var(--card-bg)', border: '1px solid var(--border-color)' }}>
+                <div className="contact-icon" style={{ background: 'rgba(249, 115, 22, 0.15)', color: 'var(--brand-orange)' }}>
                   <MapPin size={24} />
                 </div>
                 <div>
-                  <h4 style={{ fontWeight: 800, marginBottom: '4px', fontSize: '1rem' }}>Visit Us</h4>
-                  <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>{siteData.contact.address}</p>
+                  <h4 style={{ fontWeight: 800, marginBottom: '4px', fontSize: '1.05rem', color: 'var(--text-main)' }}>Visit Studio</h4>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem' }}>{siteData.contact.address}</p>
                 </div>
               </div>
 
               {/* Chintan */}
               <a href={`tel:${siteData.contact.chintanPhoneRaw}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                <div className="contact-info-item">
-                  <div className="contact-icon" style={{ background: 'rgba(251,191,36,0.1)', color: '#fbbf24' }}>
+                <div className="contact-info-item shimmer-card" style={{ background: 'var(--card-bg)', border: '1px solid var(--border-color)' }}>
+                  <div className="contact-icon" style={{ background: 'rgba(234, 179, 8, 0.15)', color: 'var(--brand-gold)' }}>
                     <Phone size={24} />
                   </div>
                   <div>
-                    <h4 style={{ fontWeight: 800, marginBottom: '4px', fontSize: '1rem' }}>Chintan Patel</h4>
-                    <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>{siteData.contact.chintanPhone}</p>
+                    <h4 style={{ fontWeight: 800, marginBottom: '4px', fontSize: '1.05rem', color: 'var(--text-main)' }}>Chintan Patel</h4>
+                    <p style={{ color: 'var(--brand-orange)', fontSize: '0.92rem', fontWeight: 800 }}>{siteData.contact.chintanPhone} (Click to Call)</p>
                   </div>
                 </div>
               </a>
 
               {/* Mehul */}
               <a href={`tel:${siteData.contact.mehulPhoneRaw}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                <div className="contact-info-item">
-                  <div className="contact-icon" style={{ background: 'rgba(251,191,36,0.1)', color: '#fbbf24' }}>
+                <div className="contact-info-item shimmer-card" style={{ background: 'var(--card-bg)', border: '1px solid var(--border-color)' }}>
+                  <div className="contact-icon" style={{ background: 'rgba(16, 185, 129, 0.15)', color: 'var(--brand-emerald)' }}>
                     <Phone size={24} />
                   </div>
                   <div>
-                    <h4 style={{ fontWeight: 800, marginBottom: '4px', fontSize: '1rem' }}>Mehul Patel</h4>
-                    <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>{siteData.contact.mehulPhone}</p>
+                    <h4 style={{ fontWeight: 800, marginBottom: '4px', fontSize: '1.05rem', color: 'var(--text-main)' }}>Mehul Patel</h4>
+                    <p style={{ color: 'var(--brand-emerald)', fontSize: '0.92rem', fontWeight: 800 }}>{siteData.contact.mehulPhone} (Click to Call)</p>
                   </div>
                 </div>
               </a>
 
               {/* Email */}
               <a href={`mailto:${siteData.contact.email}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                <div className="contact-info-item">
-                  <div className="contact-icon" style={{ background: 'rgba(139,92,246,0.1)', color: '#a78bfa' }}>
+                <div className="contact-info-item shimmer-card" style={{ background: 'var(--card-bg)', border: '1px solid var(--border-color)' }}>
+                  <div className="contact-icon" style={{ background: 'rgba(249, 115, 22, 0.15)', color: 'var(--brand-orange)' }}>
                     <Mail size={24} />
                   </div>
                   <div>
-                    <h4 style={{ fontWeight: 800, marginBottom: '4px', fontSize: '1rem' }}>Email Us</h4>
-                    <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>{siteData.contact.email}</p>
+                    <h4 style={{ fontWeight: 800, marginBottom: '4px', fontSize: '1.05rem', color: 'var(--text-main)' }}>Email Direct</h4>
+                    <p style={{ color: 'var(--brand-orange)', fontSize: '0.92rem', fontWeight: 800 }}>{siteData.contact.email}</p>
                   </div>
                 </div>
               </a>
             </div>
-          </div>
+          </motion.div>
 
           {/* Right form */}
-          <div className="glass-card" style={{ padding: '44px', background: 'rgba(13,21,48,0.9)' }}>
-            <h3 style={{ fontSize: '1.8rem', marginBottom: '2rem', fontWeight: 800 }}>Send Inquiry</h3>
+          <motion.div 
+            initial={{ opacity: 0, x: 30 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.7 }}
+            className="glass-card shimmer-card" 
+            style={{ 
+              padding: '44px', 
+              background: 'var(--card-bg)',
+              border: '1px solid var(--brand-orange)',
+              boxShadow: '0 25px 60px var(--shadow-color)'
+            }}
+          >
+            <h3 style={{ fontSize: '1.9rem', marginBottom: '0.5rem', fontWeight: 900, color: 'var(--text-main)' }}>Quick Event Inquiry</h3>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginBottom: '2rem' }}>Fill in details below for instant booking response.</p>
+            
             <form onSubmit={handleFormSubmit} style={{ display: 'flex', flexDirection: 'column' }}>
-              <input type="text" name="name" placeholder="Your Name" required onChange={handleInputChange} />
-              <input type="tel" name="phone" placeholder="Phone Number" required onChange={handleInputChange} />
-              <input type="text" name="event" placeholder="Event Type (Wedding, Party…)" required onChange={handleInputChange} />
-              <textarea name="message" placeholder="Special Requests or Message" rows={5} required onChange={handleInputChange} />
-              <button type="submit" className="btn-royal" style={{ justifyContent: 'center', marginTop: '0.5rem' }}>
-                Send via Email &nbsp;<Send size={18} />
+              <input type="text" name="name" placeholder="Your Full Name" required onChange={handleInputChange} style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-main)' }} />
+              <input type="tel" name="phone" placeholder="Phone Number (WhatsApp Preferred)" required onChange={handleInputChange} style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-main)' }} />
+              <input type="text" name="event" placeholder="Event Type (e.g. Wedding, Sangeet, Garba, Party)" required onChange={handleInputChange} style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-main)' }} />
+              <textarea name="message" placeholder="Event Location, Date, or Sound/Lighting Requests…" rows={4} required onChange={handleInputChange} style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-main)' }} />
+              <button type="submit" className="btn-royal" style={{ justifyContent: 'center', marginTop: '0.5rem', width: '100%', fontSize: '0.85rem' }}>
+                Submit Inquiry via Email &nbsp;<Send size={18} />
               </button>
             </form>
-          </div>
+          </motion.div>
         </div>
       </section>
 
       {/* ─────────────── FOOTER ─────────────── */}
-      <footer>
+      <footer style={{ background: 'var(--alt-bg)', borderTop: '1px solid var(--border-color)' }}>
         <div className="footer-inner">
           {/* Brand */}
           <div className="footer-brand">
-            <div style={{ width: '140px', height: '55px', marginBottom: '1.2rem' }}>
+            <div style={{ width: '150px', height: '60px', marginBottom: '1.4rem' }}>
               <img
                 src="/radhelogo.png"
                 alt="Radhe DJ"
@@ -1144,12 +1662,11 @@ const App = () => {
                 onError={(e) => { e.target.style.display = 'none'; }}
               />
             </div>
-            <p style={{ color: '#64748b', lineHeight: 1.9, fontSize: '0.9rem', maxWidth: '280px' }}>
-              Elevating celebrations with premium sound, mesmerizing lights &amp; spectacular special effects.
-              Serving Keshod &amp; all of Gujarat since 2010.
+            <p style={{ color: 'var(--text-muted)', lineHeight: 1.9, fontSize: '0.92rem', maxWidth: '290px' }}>
+              Elevating Gujarat celebrations with 20,000W sound, 3D laser lighting &amp; cold pyro special effects. Serving Keshod &amp; all Gujarat since 2010.
             </p>
             {/* Social icons */}
-            <div style={{ display: 'flex', gap: '14px', marginTop: '1.5rem' }}>
+            <div style={{ display: 'flex', gap: '14px', marginTop: '1.6rem' }}>
               <a href={siteData.contact.instagram} target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="social-icon">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
               </a>
@@ -1176,7 +1693,7 @@ const App = () => {
 
           {/* Services */}
           <div>
-            <h5 className="footer-heading">Services</h5>
+            <h5 className="footer-heading">Our Setup</h5>
             <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {siteData.services.slice(0, 6).map(s => (
                 <li key={s.title}><a href="#services" className="footer-link">{s.title}</a></li>
@@ -1186,22 +1703,22 @@ const App = () => {
 
           {/* Contact */}
           <div>
-            <h5 className="footer-heading">Contact</h5>
+            <h5 className="footer-heading">Contact Direct</h5>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <a href={`tel:${siteData.contact.chintanPhoneRaw}`} className="footer-contact-row">
-                <Phone size={16} style={{ color: '#fbbf24', flexShrink: 0 }} />
+                <Phone size={16} style={{ color: 'var(--brand-orange)', flexShrink: 0 }} />
                 <span>{siteData.contact.chintanPhone}</span>
               </a>
               <a href={`tel:${siteData.contact.mehulPhoneRaw}`} className="footer-contact-row">
-                <Phone size={16} style={{ color: '#fbbf24', flexShrink: 0 }} />
+                <Phone size={16} style={{ color: 'var(--brand-orange)', flexShrink: 0 }} />
                 <span>{siteData.contact.mehulPhone}</span>
               </a>
               <a href={`mailto:${siteData.contact.email}`} className="footer-contact-row">
-                <Mail size={16} style={{ color: '#fbbf24', flexShrink: 0 }} />
+                <Mail size={16} style={{ color: 'var(--brand-orange)', flexShrink: 0 }} />
                 <span>{siteData.contact.email}</span>
               </a>
               <div className="footer-contact-row" style={{ cursor: 'default' }}>
-                <MapPin size={16} style={{ color: '#fbbf24', flexShrink: 0 }} />
+                <MapPin size={16} style={{ color: 'var(--brand-orange)', flexShrink: 0 }} />
                 <span>{siteData.contact.address}</span>
               </div>
             </div>
@@ -1216,12 +1733,12 @@ const App = () => {
           <p 
             onClick={openPasscodePrompt} 
             className="admin-interactive"
-            style={{ color: 'rgba(255,255,255,0.15)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600, fontSize: '0.85rem' }}
+            style={{ color: 'var(--text-dim)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, fontSize: '0.85rem' }}
           >
-            <Lock size={12} /> Admin Portal
+            <Lock size={13} /> Admin Portal
           </p>
 
-          <p style={{ color: '#a78bfa', fontWeight: 600 }}>Premium Service for Premium People</p>
+          <p style={{ color: 'var(--brand-orange)', fontWeight: 700 }}>Royal Sound &amp; Light Production</p>
         </div>
       </footer>
 
@@ -1237,7 +1754,7 @@ const App = () => {
               className="float-btn float-top"
               aria-label="Back to top"
             >
-              <ArrowUp size={24} />
+              <ArrowUp size={22} />
             </motion.button>
           )}
         </AnimatePresence>
@@ -1436,6 +1953,7 @@ const App = () => {
                   { id: 'testimonials', label: 'Testimonials', icon: 'Sparkles' },
                   { id: 'faqs', label: 'FAQs List', icon: 'HelpCircle' },
                   { id: 'contact', label: 'Contact Details', icon: 'Phone' },
+                  { id: 'djSongs', label: 'DJ Song Playlist', icon: 'Music' },
                   { id: 'settings', label: 'System & Security', icon: 'Settings' }
                 ].map(item => {
                   const isActive = adminTab === item.id;
@@ -2458,7 +2976,103 @@ const App = () => {
                   </div>
                 )}
 
-                {/* TAB 9: SETTINGS (PASSCODE) */}
+                {/* TAB 9: DJ SONG PLAYLIST */}
+                {adminTab === 'djSongs' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '850px' }}>
+                    <div className="glass-card" style={{ padding: '30px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                        <h4 style={{ color: '#fbbf24', fontSize: '1rem', fontWeight: 800 }}>🎵 DJ Song Playlist Manager</h4>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newSong = { title: 'New Song', artist: 'Artist Name', url: '' };
+                            setDraftData(prev => ({ ...prev, djSongs: [...(prev.djSongs || []), newSong] }));
+                          }}
+                          className="btn-royal admin-interactive"
+                          style={{ padding: '8px 16px', fontSize: '0.78rem', gap: '6px' }}
+                        >
+                          <Plus size={14} /> Add New Song
+                        </button>
+                      </div>
+                      <p style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '20px', lineHeight: 1.6 }}>
+                        Add direct MP3/audio URLs here. These songs will appear in the DJ Mixer player on the website. Admin can add, reorder, or remove tracks anytime.
+                      </p>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                        {(draftData.djSongs || []).map((song, idx) => (
+                          <div key={idx} style={{ background: 'rgba(13,21,48,0.5)', border: '1px solid rgba(249, 115, 22, 0.15)', borderRadius: '14px', padding: '18px', position: 'relative' }}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const updated = (draftData.djSongs || []).filter((_, i) => i !== idx);
+                                setDraftData(prev => ({ ...prev, djSongs: updated }));
+                              }}
+                              className="admin-interactive"
+                              style={{ position: 'absolute', top: '14px', right: '14px', border: 'none', background: 'transparent', color: '#f43f5e', cursor: 'pointer' }}
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+                              <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(249,115,22,0.15)', border: '1px solid rgba(249,115,22,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f97316', flexShrink: 0 }}>
+                                <Music size={16} />
+                              </div>
+                              <span style={{ fontWeight: 800, fontSize: '0.88rem', color: '#e2e8f0' }}>Track #{idx + 1}</span>
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                              <div>
+                                <label style={{ fontSize: '0.68rem', color: '#94a3b8', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Song Title</label>
+                                <input
+                                  type="text"
+                                  value={song.title}
+                                  onChange={e => {
+                                    const updated = [...(draftData.djSongs || [])];
+                                    updated[idx].title = e.target.value;
+                                    setDraftData(prev => ({ ...prev, djSongs: updated }));
+                                  }}
+                                  placeholder="e.g. Kesariya"
+                                  style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '6px', padding: '8px', color: '#fff', fontSize: '0.8rem' }}
+                                />
+                              </div>
+                              <div>
+                                <label style={{ fontSize: '0.68rem', color: '#94a3b8', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Artist / Album</label>
+                                <input
+                                  type="text"
+                                  value={song.artist}
+                                  onChange={e => {
+                                    const updated = [...(draftData.djSongs || [])];
+                                    updated[idx].artist = e.target.value;
+                                    setDraftData(prev => ({ ...prev, djSongs: updated }));
+                                  }}
+                                  placeholder="e.g. Arijit Singh · Brahmastra"
+                                  style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '6px', padding: '8px', color: '#94a3b8', fontSize: '0.8rem' }}
+                                />
+                              </div>
+                            </div>
+                            <div>
+                              <label style={{ fontSize: '0.68rem', color: '#94a3b8', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>MP3 Audio URL (Direct link ending in .mp3)</label>
+                              <input
+                                type="url"
+                                value={song.url}
+                                onChange={e => {
+                                  const updated = [...(draftData.djSongs || [])];
+                                  updated[idx].url = e.target.value;
+                                  setDraftData(prev => ({ ...prev, djSongs: updated }));
+                                }}
+                                placeholder="https://example.com/audio/song.mp3"
+                                style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '6px', padding: '8px', color: '#60a5fa', fontSize: '0.78rem', fontFamily: 'monospace' }}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                        {(draftData.djSongs || []).length === 0 && (
+                          <p style={{ textAlign: 'center', color: '#475569', padding: '32px', fontSize: '0.9rem' }}>No songs yet. Click "Add New Song" to begin.</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB 10: SETTINGS (PASSCODE) */}
                 {adminTab === 'settings' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '800px' }}>
                     <div className="glass-card" style={{ padding: '30px' }}>
